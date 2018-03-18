@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!DOCTYPE project [
+<!ENTITY name "bnb_nu_cosmic">
+<!ENTITY version "v06_26_01_10">
+<!ENTITY qualifier "e10:prof">
+<!ENTITY dataset "prodgenie_bnb_nu_cosmic_uboone_mcc8.6_reco2_dev">
+<!ENTITY user "wvdp">
+]>
+
+<project name="&name;">
+    <!-- Doesn't matter for non-generating jobs -->
+    <numevents>1000000</numevents>
+
+    <!--  Operating System  -->
+    <os>SL6</os>
+
+    <!--  Batch resources  -->
+    <resource>DEDICATED,OPPORTUNISTIC,OFFSITE</resource>
+
+
+    <!--  Larsoft information  -->
+    <larsoft>
+        <tag>&version;</tag>
+        <qual>&qualifier;</qual>
+        <local>/uboone/app/users/wvdp/Binaries/MyLarsoft/srcs/tar/v2/hits_analyzer.tar</local>
+        <fcldir>/uboone/app/users/wvdp/Binaries/MyLarsoft/srcs/prototyping/prototyping/job</fcldir>
+    </larsoft>
+
+    <!--  Project stages  -->
+    <stage name="hits">
+        <fcl>prototyping.fcl</fcl>
+        <outdir>/pnfs/uboone/scratch/users/&user;/out/&name;/lite</outdir>
+        <logdir>/pnfs/uboone/scratch/users/&user;/log/&name;/lite</logdir>
+        <workdir>/pnfs/uboone/scratch/users/&user;/work/&name;/lite</workdir>
+        <inputdef>&dataset;</inputdef>
+        <numjobs>40</numjobs>
+        <disk>4GB</disk>
+        <memory>2048</memory>
+        <maxfilesperjob>100</maxfilesperjob>
+        <datatier>hits</datatier>
+        <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start>
+        <schema>root</schema>
+    </stage>
+    <!--  file type  -->
+    <!-- <filetype>mc</filetype> -->
+    <!--  run type  -->
+    <!-- <runtype>physics</runtype> -->
+</project>

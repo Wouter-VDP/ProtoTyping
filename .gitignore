@@ -1,0 +1,10 @@
+*.root
+*.log
+._*
+mem.db
+time.db
+.DS_Store
+*~
+*.txt
+*.csv
+.vscode
