@@ -1,10 +1,75 @@
 #include "Prototyping.h"
 
-void ProtoTypeAnalyzer::analyze(art::Event const &evt)
+void Prototyping::analyze(art::Event const &evt)
 {
   fRun = evt.run();
   fSubrun = evt.subRun();
   fEvent = evt.id().event();
+
+  // Test the values of the energy calibration correction:
+  int bins[3] = {103, 94, 415};  // set to have 2.5cm cubes, calibration intrinsically done with 5.0cm cubes
+  double start[3] = {0, -116.5, 0};
+  double end[3] = {256.35, 116.5, 1036.8};
+  double pos[3] = {0, -116.5, 0};
+  double step[3];
+  for (int i = 0; i < 3; ++i)
+  {
+    step[i] = (end[i] - start[i]) / bins[i];
+  }
+
+  std::ofstream myfile;
+  std::string fname = "Energy_Cali_";
+  fname += std::to_string(fEvent);
+  fname += ".txt";
+  myfile.open(fname);
+  myfile << "x"
+         << "\t"
+         << "y"
+         << "\t"
+         << "z"
+         << "\t"
+         << "Correction U"
+         << "\t"
+         << "Correction V"
+         << "\t"
+         << "Correction Y" << std::endl;
+
+  while (pos[0] < end[0])
+  {
+    while (pos[1] < end[1])
+    {
+      while (pos[2] < end[2])
+      {
+        float correction[3] = {0, 0, 0};
+        for (int plane = 0; plane < 3; ++plane)
+        {
+          // Write the correction to file
+          float yzcorrection = energyCalibProvider.YZdqdxCorrection(plane, pos[1], pos[2]);
+          float xcorrection = energyCalibProvider.XdqdxCorrection(plane, pos[0]);
+          if (!yzcorrection)
+            yzcorrection = 1.0;
+          if (!xcorrection)
+            xcorrection = 1.0;
+          correction[plane] = yzcorrection * xcorrection;
+        }
+        //myfile << pos[0] << "\t" << pos[1] << "\t" << pos[2] << "\t" << correction[0] << "\t" << correction[1] << "\t" << correction[2] << std::endl;
+        xx = pos[0];
+        yy = pos[1];
+        zz = pos[2];
+        corr_u = correction[0];
+        corr_v = correction[1];
+        corr_y = correction[2];
+        fCalibrationTree->Fill();
+        pos[2] += step[2];
+      }
+      pos[2] = start[2];
+      pos[1] += step[1];
+    }
+    pos[1] = start[1];
+    pos[0] += step[0];
+  }
+
+  myfile.close();
 
   // Initialise the handles and associations
   auto const &pfparticle_handle =
@@ -12,14 +77,13 @@ void ProtoTypeAnalyzer::analyze(art::Event const &evt)
   auto const &cluster_handle =
       evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle =
-        evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
+      evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Hit> hits_per_cluster(cluster_handle, evt, m_pfp_producer);
   art::FindManyP<recob::SpacePoint> spcpnts_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
-
 
   for (size_t i_pfp = 0; i_pfp < pfparticle_handle->size(); i_pfp++)
   {
@@ -125,4 +189,4 @@ void ProtoTypeAnalyzer::analyze(art::Event const &evt)
   }
 }
 
-DEFINE_ART_MODULE(ProtoTypeAnalyzer)
+DEFINE_ART_MODULE(Prototyping)
