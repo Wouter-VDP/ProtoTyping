@@ -1,75 +1,38 @@
 #include "Prototyping.h"
 
+void Prototyping::endSubRun(const art::SubRun &sr)
+{
+
+  fRun_sr = sr.run();
+  fSubrun_sr = sr.subRun();
+
+  art::Handle<sumdata::POTSummary> potListHandle;
+  if (!m_is_data)
+  {
+    if (sr.getByLabel("generator", potListHandle))
+      fPot = potListHandle->totpot;
+    else
+      fPot = 0.;
+  }
+  else
+  {
+    if (sr.getByLabel("beamdata", "bnbETOR860", potListHandle))
+      fPot = potListHandle->totpot;
+    else
+      fPot = 0.;
+  }
+
+  fPOTTree->Fill();
+}
+
 void Prototyping::analyze(art::Event const &evt)
 {
+
+  std::cout << "fTrack_StartX" << fTrack_StartX << std::endl;
+
   fRun = evt.run();
   fSubrun = evt.subRun();
   fEvent = evt.id().event();
-
-  // Test the values of the energy calibration correction:
-  int bins[3] = {103, 94, 415};  // set to have 2.5cm cubes, calibration intrinsically done with 5.0cm cubes
-  double start[3] = {0, -116.5, 0};
-  double end[3] = {256.35, 116.5, 1036.8};
-  double pos[3] = {0, -116.5, 0};
-  double step[3];
-  for (int i = 0; i < 3; ++i)
-  {
-    step[i] = (end[i] - start[i]) / bins[i];
-  }
-
-  std::ofstream myfile;
-  std::string fname = "Energy_Cali_";
-  fname += std::to_string(fEvent);
-  fname += ".txt";
-  myfile.open(fname);
-  myfile << "x"
-         << "\t"
-         << "y"
-         << "\t"
-         << "z"
-         << "\t"
-         << "Correction U"
-         << "\t"
-         << "Correction V"
-         << "\t"
-         << "Correction Y" << std::endl;
-
-  while (pos[0] < end[0])
-  {
-    while (pos[1] < end[1])
-    {
-      while (pos[2] < end[2])
-      {
-        float correction[3] = {0, 0, 0};
-        for (int plane = 0; plane < 3; ++plane)
-        {
-          // Write the correction to file
-          float yzcorrection = energyCalibProvider.YZdqdxCorrection(plane, pos[1], pos[2]);
-          float xcorrection = energyCalibProvider.XdqdxCorrection(plane, pos[0]);
-          if (!yzcorrection)
-            yzcorrection = 1.0;
-          if (!xcorrection)
-            xcorrection = 1.0;
-          correction[plane] = yzcorrection * xcorrection;
-        }
-        //myfile << pos[0] << "\t" << pos[1] << "\t" << pos[2] << "\t" << correction[0] << "\t" << correction[1] << "\t" << correction[2] << std::endl;
-        xx = pos[0];
-        yy = pos[1];
-        zz = pos[2];
-        corr_u = correction[0];
-        corr_v = correction[1];
-        corr_y = correction[2];
-        fCalibrationTree->Fill();
-        pos[2] += step[2];
-      }
-      pos[2] = start[2];
-      pos[1] += step[1];
-    }
-    pos[1] = start[1];
-    pos[0] += step[0];
-  }
-
-  myfile.close();
 
   // Initialise the handles and associations
   auto const &pfparticle_handle =
@@ -84,11 +47,18 @@ void Prototyping::analyze(art::Event const &evt)
   art::FindManyP<recob::Hit> hits_per_cluster(cluster_handle, evt, m_pfp_producer);
   art::FindManyP<recob::SpacePoint> spcpnts_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
+  art::FindOneP<recob::Track> track_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
+
+  fNumPfp = pfparticle_handle->size();
 
   for (size_t i_pfp = 0; i_pfp < pfparticle_handle->size(); i_pfp++)
   {
+    clear_PFParticle();
+
     recob::PFParticle const &pfparticle = pfparticle_handle->at(i_pfp);
     fPdgCode = pfparticle.PdgCode();
+    fNumDaughters = pfparticle.NumDaughters();
+    fIsPrimary = pfparticle.IsPrimary();
 
     fNhits = 0;
     fNhitsU = 0;
@@ -136,20 +106,51 @@ void Prototyping::analyze(art::Event const &evt)
       }
     }
 
+    // Is the Pfparticle is a TRACK
+    if (fPdgCode == 13)
+    {
+      art::Ptr<recob::Track> const &track_obj = track_per_pfpart.at(i_pfp);
+      if (track_obj.isNull())
+      {
+        std::cout << "[LEE Analyzer] track is Null" << std::endl;
+        fTrack_Valid = false;
+      }
+      else
+      {
+        fTrack_Valid = true;
+        fTrack_HasMomentum = track_obj->HasMomentum();
+
+        fTrack_StartX = track_obj->Start().X();
+        fTrack_StartY = track_obj->Start().Y();
+        fTrack_StartZ = track_obj->Start().Z();
+        fTrack_EndX = track_obj->Trajectory().End().X();
+        fTrack_EndY = track_obj->Trajectory().End().Y();
+        fTrack_EndZ = track_obj->Trajectory().End().Z();
+        fTrack_Length = track_obj->Length();
+        fTrack_StartMomentumX = track_obj->StartMomentumVector().X();
+        fTrack_StartMomentumY = track_obj->StartMomentumVector().Y();
+        fTrack_StartMomentumZ = track_obj->StartMomentumVector().Z();
+        fTrack_EndMomentumX = track_obj->EndMomentumVector().X();
+        fTrack_EndMomentumY = track_obj->EndMomentumVector().Y();
+        fTrack_EndMomentumZ = track_obj->EndMomentumVector().Z();
+        fTrack_Theta = track_obj->Theta();
+        fTrack_Phi = track_obj->Phi();
+        fTrack_ZenithAngle = track_obj->ZenithAngle();
+        fTrack_AzimuthAngle = track_obj->AzimuthAngle();
+      }
+    }
+
     try
     {
       art::Ptr<recob::Vertex> vertex_obj = vertex_per_pfpart.at(i_pfp);
-      double neutrino_vertex[3];
-      vertex_obj->XYZ(neutrino_vertex);
-      fvx = neutrino_vertex[0];
-      fvy = neutrino_vertex[1];
-      fvz = neutrino_vertex[2];
+      double vertex[3];
+      vertex_obj->XYZ(vertex);
+      fVx = vertex[0];
+      fVy = vertex[1];
+      fVz = vertex[2];
     }
     catch (...)
     {
-      fvx = 1000000.;
-      fvy = 1000000.;
-      fvz = 1000000.;
       std::cout << "No vertex found for " << fPdgCode << " with " << fNhits << std::endl;
     }
 

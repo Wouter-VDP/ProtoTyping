@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "intime_pandoracosmic">
+<!ENTITY name "data_bnbext_v4_pandoracosmic">
 <!ENTITY version "v06_26_01_13">
 <!ENTITY qualifier "e10:prof">
-<!ENTITY dataset "prodcosmics_corsika_cmc_uboone_intime_mcc8.7_reco2_dev">
+<!ENTITY dataset "prod_reco_optfilter_extbnb_v12_mcc8_dev_gooodruns_v4s">
 <!ENTITY user "wvdp">
 ]>
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>200000</numevents>
+    <numevents>188484</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -33,7 +33,7 @@
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>286</numjobs>
+        <numjobs>336</numjobs>
         <disk>5GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>14</maxfilesperjob>
