@@ -77,11 +77,43 @@ void Prototyping::analyze(art::Event const &evt)
         fMc_EndY = mcparticle.EndY();
         fMc_EndZ = mcparticle.EndZ();
 
-        std::vector<float> start = { fMc_StartX, fMc_StartY, fMc_StartZ };
-        std::vector<float> end = { fMc_EndX, fMc_EndY, fMc_EndZ };        
+        std::vector<float> start = {fMc_StartX, fMc_StartY, fMc_StartZ};
+        std::vector<float> end = {fMc_EndX, fMc_EndY, fMc_EndZ};
         fMc_StartInside = geoHelper.isActive(start);
         fMc_EndInside = geoHelper.isActive(end);
-        fMc_Length = geoHelper.distance(start,end); // This is the total length, not the length in the detector!
+        fMc_Length = geoHelper.distance(start, end); // This is the total length, not the length in the detector!
+
+        // Save spacecharge corrected mc positions:
+        auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
+        std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX, fMc_StartY, fMc_StartZ);
+        std::vector<double> sce_end = SCE->GetPosOffsets(fMc_EndX, fMc_EndY, fMc_EndZ);
+
+        if (SCE->GetPosOffsets(fMc_StartX, fMc_StartY, fMc_StartZ).size() == 3 && fMc_StartInside)
+        {
+          fMc_StartX_sce = fMc_StartX - sce_start[0] + 0.7;
+          fMc_StartY_sce = fMc_StartY + sce_start[1];
+          fMc_StartZ_sce = fMc_StartZ + sce_start[2];
+        }
+        else
+        {
+          fMc_StartX_sce = -9999;
+          fMc_StartY_sce = -9999;
+          fMc_StartZ_sce = -9999;
+        }
+
+        if (SCE->GetPosOffsets(fMc_EndX, fMc_EndY, fMc_EndZ).size() == 3 && fMc_EndInside)
+        {
+          fMc_EndX_sce = fMc_EndX - sce_end[0] + 0.7;
+          fMc_EndY_sce = fMc_EndY + sce_end[1];
+          fMc_EndZ_sce = fMc_EndZ + sce_end[2];
+        }
+        else
+        {
+          fMc_EndX_sce = -9999;
+          fMc_EndY_sce = -9999;
+          fMc_EndZ_sce = -9999;
+        }
+
         string_process.insert(mcparticle.Process());
 
         fMCParticlesTree->Fill();

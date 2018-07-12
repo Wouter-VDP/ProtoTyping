@@ -9,15 +9,15 @@ class GeometryHelper
     GeometryHelper() = default;
     ~GeometryHelper() = default;
 
-    bool isActive(const std::vector<double> &x) const;
-    bool isActive(const double x[3]) const;
+    bool isActive(const std::vector<float> &x) const;
+    bool isActive(const float x[3]) const;
 
-    double distance(const std::vector<double> &a, const std::vector<double> &b) const;
+    float distance(const std::vector<float> &a, const std::vector<float> &b) const;
 
   private:
 };
 
-bool GeometryHelper::isActive(const std::vector<double> &x) const
+bool GeometryHelper::isActive(const std::vector<float> &x) const
 {
     if (x.size() != 3)
     {
@@ -27,12 +27,13 @@ bool GeometryHelper::isActive(const std::vector<double> &x) const
     return this->isActive(&x[0]);
 }
 
-bool GeometryHelper::isActive(const double x[3]) const
+bool GeometryHelper::isActive(const float x[3]) const
 {
 
     art::ServiceHandle<geo::Geometry> geo;
     std::vector<double> bnd = {
-        0., 2. * geo->DetHalfWidth(), -geo->DetHalfHeight(), geo->DetHalfHeight(),
+        0., 2.0 * geo->DetHalfWidth(),
+        -1 * geo->DetHalfHeight(), geo->DetHalfHeight(),
         0., geo->DetLength()};
 
     bool is_x = x[0] > bnd[0] && x[0] < bnd[1];
@@ -41,15 +42,15 @@ bool GeometryHelper::isActive(const double x[3]) const
     return is_x && is_y && is_z;
 }
 
-double GeometryHelper::distance(const std::vector<double> &a,
-                                const std::vector<double> &b) const
+float GeometryHelper::distance(const std::vector<float> &a,
+                               const std::vector<float> &b) const
 {
     if (a.size() != 3 || b.size() != 3)
     {
         return -1;
     }
 
-    double d = 0;
+    float d = 0;
 
     for (int i = 0; i < 3; i++)
     {

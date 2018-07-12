@@ -37,6 +37,7 @@
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "larcoreobj/SummaryData/POTSummary.h"
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibService.h"
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibProvider.h"
@@ -70,13 +71,17 @@ public:
   void reconfigure(fhicl::ParameterSet const &p) override;
 
 private:
-  // FCL parameter
+  // FCL parameters
   std::string m_pfp_producer;
   bool m_is_lite;
   bool m_is_data;
   
-  GeometryHelper geo_helper;
-  std::set<std::string> string_process; // This variable counts the number of processes invloved.
+
+  // Other firvate fields
+  GeometryHelper geoHelper;
+  std::set<std::string> string_process; // This variable counts the different processes invloved.
+
+  const lariov::TPCEnergyCalibProvider &energyCalibProvider = art::ServiceHandle<lariov::TPCEnergyCalibService>()->GetProvider();
   std::map<std::string, uint> map_process =
       {
           {"0", 0},
@@ -105,10 +110,9 @@ private:
           {"primary", 23},
           {"protonInelastic", 24},
       };
+  
 
-  //handle to tpc energy calibration provider
-  const lariov::TPCEnergyCalibProvider &energyCalibProvider = art::ServiceHandle<lariov::TPCEnergyCalibService>()->GetProvider();
-
+  // Fields for in the tree!
   TTree *fPOTTree;
   uint fRun_sr, fSubrun_sr;
   float fPot;
@@ -124,9 +128,15 @@ private:
   float fMc_StartX;
   float fMc_StartY;
   float fMc_StartZ;
+  float fMc_StartX_sce;
+  float fMc_StartY_sce;
+  float fMc_StartZ_sce;
   float fMc_EndX;
   float fMc_EndY;
   float fMc_EndZ;
+  float fMc_EndX_sce;
+  float fMc_EndY_sce;
+  float fMc_EndZ_sce;
   float fMc_Length;
   float fMc_StartMomentumX;
   float fMc_StartMomentumY;
@@ -213,9 +223,15 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
     fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
     fMCParticlesTree->Branch("mc_starty", &fMc_StartY, "mc_starty/F");
     fMCParticlesTree->Branch("mc_startz", &fMc_StartZ, "mc_startz/F");
+    fMCParticlesTree->Branch("mc_startx_sce", &fMc_StartX_sce, "mc_startx_sce/F");
+    fMCParticlesTree->Branch("mc_starty_sce", &fMc_StartY_sce, "mc_starty_sce/F");
+    fMCParticlesTree->Branch("mc_startz_sce", &fMc_StartZ_sce, "mc_startz_sce/F");
     fMCParticlesTree->Branch("mc_endx", &fMc_EndX, "mc_endx/F");
     fMCParticlesTree->Branch("mc_endy", &fMc_EndY, "mc_endy/F");
     fMCParticlesTree->Branch("mc_endz", &fMc_EndZ, "mc_endz/F");
+    fMCParticlesTree->Branch("mc_endx_sce", &fMc_EndX_sce, "mc_endx_sce/F");
+    fMCParticlesTree->Branch("mc_endy_sce", &fMc_EndY_sce, "mc_endy_sce/F");
+    fMCParticlesTree->Branch("mc_endz_sce", &fMc_EndZ_sce, "mc_endz_sce/F");
     fMCParticlesTree->Branch("mc_startmomentumx", &fMc_StartMomentumX, "mc_startmomentumx/F");
     fMCParticlesTree->Branch("mc_startmomentumy", &fMc_StartMomentumY, "mc_startmomentumy/F");
     fMCParticlesTree->Branch("mc_startmomentumz", &fMc_StartMomentumZ, "mc_startmomentumz/F");
