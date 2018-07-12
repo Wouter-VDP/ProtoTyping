@@ -27,12 +27,10 @@ void Prototyping::endSubRun(const art::SubRun &sr)
 
 void Prototyping::analyze(art::Event const &evt)
 {
-
-  std::cout << "fTrack_StartX" << fTrack_StartX << std::endl;
-
   fRun = evt.run();
   fSubrun = evt.subRun();
   fEvent = evt.id().event();
+  fNevents++;
 
   // Initialise the handles and associations
   auto const &pfparticle_handle =
@@ -49,9 +47,56 @@ void Prototyping::analyze(art::Event const &evt)
   art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
   art::FindOneP<recob::Track> track_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
 
-  fNumPfp = pfparticle_handle->size();
+  if (!m_is_data)
+  {
+    auto const &mcparticles_handle =
+        evt.getValidHandle<std::vector<simb::MCParticle>>("largeant");
 
-  for (size_t i_pfp = 0; i_pfp < pfparticle_handle->size(); i_pfp++)
+    fNumMcp = mcparticles_handle->size();
+
+    for (size_t i_mcp = 0; i_mcp < fNumMcp; i_mcp++)
+    {
+
+      simb::MCParticle const &mcparticle = mcparticles_handle->at(i_mcp);
+      if (mcparticle.E() > 0.01)
+      {
+        fNumMcp10MeV++; //Counter
+        clear_MCParticle();
+        fMc_Process = map_process[mcparticle.Process()];
+        fMc_Time = mcparticle.T();
+        fMc_StatusCode = mcparticle.StatusCode();
+        fMc_E = mcparticle.E();
+        fMc_PdgCode = mcparticle.PdgCode();
+        fMc_StartMomentumX = mcparticle.Px();
+        fMc_StartMomentumY = mcparticle.Py();
+        fMc_StartMomentumZ = mcparticle.Pz();
+        fMc_StartX = mcparticle.Vx();
+        fMc_StartY = mcparticle.Vy();
+        fMc_StartZ = mcparticle.Vz();
+        fMc_EndX = mcparticle.EndX();
+        fMc_EndY = mcparticle.EndY();
+        fMc_EndZ = mcparticle.EndZ();
+
+        std::vector<float> start = { fMc_StartX, fMc_StartY, fMc_StartZ };
+        std::vector<float> end = { fMc_EndX, fMc_EndY, fMc_EndZ };        
+        fMc_StartInside = geoHelper.isActive(start);
+        fMc_EndInside = geoHelper.isActive(end);
+        fMc_Length = geoHelper.distance(start,end); // This is the total length, not the length in the detector!
+        string_process.insert(mcparticle.Process());
+
+        fMCParticlesTree->Fill();
+      }
+    }
+
+    std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
+    for (auto elem : string_process)
+    {
+      std::cout << elem << ", ";
+    }
+  }
+
+  fNumPfp = pfparticle_handle->size();
+  for (size_t i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
   {
     clear_PFParticle();
 
@@ -71,6 +116,8 @@ void Prototyping::analyze(art::Event const &evt)
     fNclusters = clusters.size();
     for (art::Ptr<recob::Cluster> &cluster : clusters)
     {
+      clear_Cluster();
+
       fClusterCharge = cluster->Integral();
       fClusterWidth = cluster->Width();
       fClusterNhits = cluster->NHits();

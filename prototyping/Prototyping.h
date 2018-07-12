@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <set>
 
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
@@ -34,12 +35,15 @@
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/Cluster.h"
 
+#include "nusimdata/SimulationBase/MCParticle.h"
 #include "larcoreobj/SummaryData/POTSummary.h"
 
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibService.h"
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibProvider.h"
 
 #include "TTree.h"
+
+#include "GeometryHelper.h"
 
 class Prototyping;
 
@@ -58,15 +62,49 @@ public:
 
   // Required functions.
   void clear();
+  void clear_MCParticle();
   void clear_PFParticle();
+  void clear_Cluster();
   void analyze(art::Event const &e) override;
   void endSubRun(const art::SubRun &sr);
   void reconfigure(fhicl::ParameterSet const &p) override;
 
 private:
+  // FCL parameter
   std::string m_pfp_producer;
   bool m_is_lite;
   bool m_is_data;
+  
+  GeometryHelper geo_helper;
+  std::set<std::string> string_process; // This variable counts the number of processes invloved.
+  std::map<std::string, uint> map_process =
+      {
+          {"0", 0},
+          {"CoulombScat", 1},
+          {"Decay", 2},
+          {"annihil", 3},
+          {"compt", 4},
+          {"conv", 5},
+          {"dInelastic", 6},
+          {"eBrem", 7},
+          {"eIoni", 8},
+          {"hBertiniCaptureAtRest", 9},
+          {"hIoni", 10},
+          {"hadElastic", 11},
+          {"muBrems", 12},
+          {"muIoni", 13},
+          {"muMinusCaptureAtRest", 14},
+          {"muPairProd", 15},
+          {"muonNuclear", 16},
+          {"nCapture", 17},
+          {"neutronInelastic", 18},
+          {"phot", 19},
+          {"photonNuclear", 20},
+          {"pi+Inelastic", 21},
+          {"pi-Inelastic", 22},
+          {"primary", 23},
+          {"protonInelastic", 24},
+      };
 
   //handle to tpc energy calibration provider
   const lariov::TPCEnergyCalibProvider &energyCalibProvider = art::ServiceHandle<lariov::TPCEnergyCalibService>()->GetProvider();
@@ -74,6 +112,28 @@ private:
   TTree *fPOTTree;
   uint fRun_sr, fSubrun_sr;
   float fPot;
+  uint fNevents;
+
+  TTree *fMCParticlesTree;
+  uint fNumMcp;
+  uint fNumMcp10MeV; // 10 MeV criteria to keep only relevant particles.
+  float fMc_E;
+  int fMc_PdgCode;
+  bool fMc_StartInside;
+  bool fMc_EndInside;
+  float fMc_StartX;
+  float fMc_StartY;
+  float fMc_StartZ;
+  float fMc_EndX;
+  float fMc_EndY;
+  float fMc_EndZ;
+  float fMc_Length;
+  float fMc_StartMomentumX;
+  float fMc_StartMomentumY;
+  float fMc_StartMomentumZ;
+  uint fMc_Process; // std::string
+  int fMc_StatusCode;
+  float fMc_Time;
 
   TTree *fPFParticlesTree;
   uint fRun, fSubrun, fEvent;
@@ -131,6 +191,36 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fPOTTree->Branch("run", &fRun_sr, "run/i");
   fPOTTree->Branch("subrun", &fSubrun_sr, "subrun/i");
   fPOTTree->Branch("pot", &fPot, "pot/d");
+  fPOTTree->Branch("n_events", &fNevents, "n_events/i");
+
+  //Currently there is no tree for the event itself, and also no flash tree
+
+  if (!m_is_data)
+  {
+    fMCParticlesTree = tfs->make<TTree>("MCParticles", "MCParticles Tree");
+    fMCParticlesTree->Branch("event", &fEvent, "event/i");
+    fMCParticlesTree->Branch("run", &fRun, "run/i");
+    fMCParticlesTree->Branch("subrun", &fSubrun, "subrun/i");
+    fMCParticlesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
+    fMCParticlesTree->Branch("num_mcp_10MeV", &fNumMcp10MeV, "num_mcp_10MeV/i");
+    fMCParticlesTree->Branch("mc_energy", &fMc_E, "mc_energy/F");
+    fMCParticlesTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
+    fMCParticlesTree->Branch("mc_status_code", &fMc_StatusCode, "mc_status_code/I");
+    fMCParticlesTree->Branch("mc_process", &fMc_Process, "mc_pocess/i");
+    fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
+    fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
+    fMCParticlesTree->Branch("mc_time", &fMc_Time, "mc_time/F");
+    fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
+    fMCParticlesTree->Branch("mc_starty", &fMc_StartY, "mc_starty/F");
+    fMCParticlesTree->Branch("mc_startz", &fMc_StartZ, "mc_startz/F");
+    fMCParticlesTree->Branch("mc_endx", &fMc_EndX, "mc_endx/F");
+    fMCParticlesTree->Branch("mc_endy", &fMc_EndY, "mc_endy/F");
+    fMCParticlesTree->Branch("mc_endz", &fMc_EndZ, "mc_endz/F");
+    fMCParticlesTree->Branch("mc_startmomentumx", &fMc_StartMomentumX, "mc_startmomentumx/F");
+    fMCParticlesTree->Branch("mc_startmomentumy", &fMc_StartMomentumY, "mc_startmomentumy/F");
+    fMCParticlesTree->Branch("mc_startmomentumz", &fMc_StartMomentumZ, "mc_startmomentumz/F");
+    //fMCParticlesTree->Branch("mc_length", &fMc_Len, "mc_length/F");
+  }
 
   fPFParticlesTree = tfs->make<TTree>("PFParticles", "PFParticles Tree");
   fPFParticlesTree->Branch("event", &fEvent, "event/i");
@@ -216,13 +306,19 @@ void Prototyping::clear()
   fRun_sr = 0;
   fSubrun_sr = 0;
   fPot = 0;
+  fNevents = 0;
 
   fRun = 0;
   fSubrun = 0;
   fEvent = 0;
 
   fNumPfp = 0;
-  /*
+  fNumMcp = 0;
+  fNumMcp10MeV = 0;
+}
+
+void Prototyping::clear_Cluster()
+{
   // fClustersTree;
   fClusterCharge = -9999;
   fClusterWidth = -9999;
@@ -230,6 +326,7 @@ void Prototyping::clear()
   fClusterNhits = 0;
   fClusterPlane = 0;
 
+  /*
   // fHitsTree;
   fPlane = 0;
   fWire = 0;
@@ -281,4 +378,25 @@ void Prototyping::clear_PFParticle()
   fTrack_ZenithAngle = -9999;
   fTrack_AzimuthAngle = -9999;
   //shower
+}
+
+void Prototyping::clear_MCParticle()
+{
+  fMc_EndX = -9999;
+  fMc_EndY = -9999;
+  fMc_EndZ = -9999;
+  fMc_StartX = -9999;
+  fMc_StartY = -9999;
+  fMc_StartZ = -9999;
+  fMc_Length = -9999;
+  fMc_StartMomentumX = 0;
+  fMc_StartMomentumY = 0;
+  fMc_StartMomentumZ = 0;
+  fMc_Process = 0;
+  fMc_E = 0;
+  fMc_PdgCode = 0;
+  fMc_Time = 0;
+  fMc_StatusCode = -9999; //No idea what values this can take
+  fMc_EndInside = false;
+  fMc_EndInside = false;
 }
