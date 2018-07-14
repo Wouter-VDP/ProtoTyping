@@ -2,6 +2,7 @@
 #define GEOMETRYHELPER_H
 
 #include "larcore/Geometry/Geometry.h"
+#include "larcore/Geometry/TPCGeo.h"
 
 class GeometryHelper
 {

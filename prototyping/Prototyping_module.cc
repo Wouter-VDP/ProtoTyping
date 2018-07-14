@@ -23,10 +23,17 @@ void Prototyping::endSubRun(const art::SubRun &sr)
   }
 
   fPOTTree->Fill();
+
+  std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
+  for (auto elem : string_process)
+  {
+    std::cout << elem << ", ";
+  }
 }
 
 void Prototyping::analyze(art::Event const &evt)
 {
+  clear();
   fRun = evt.run();
   fSubrun = evt.subRun();
   fEvent = evt.id().event();
@@ -39,6 +46,7 @@ void Prototyping::analyze(art::Event const &evt)
       evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle =
       evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
+  auto const &optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_flash_producer);
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
@@ -56,13 +64,15 @@ void Prototyping::analyze(art::Event const &evt)
 
     for (size_t i_mcp = 0; i_mcp < fNumMcp; i_mcp++)
     {
-
       simb::MCParticle const &mcparticle = mcparticles_handle->at(i_mcp);
-      if (mcparticle.E() > 0.01)
+      string_process.insert(mcparticle.Process());
+      if (mcparticle.E() > 0.02)
       {
-        fNumMcp10MeV++; //Counter
         clear_MCParticle();
-        fMc_Process = map_process[mcparticle.Process()];
+        if (map_process.find(mcparticle.Process()) == map_process.end())
+        {
+          fMc_Process = map_process[mcparticle.Process()];
+        }
         fMc_Time = mcparticle.T();
         fMc_StatusCode = mcparticle.StatusCode();
         fMc_E = mcparticle.E();
@@ -83,52 +93,114 @@ void Prototyping::analyze(art::Event const &evt)
         fMc_EndInside = geoHelper.isActive(end);
         fMc_Length = geoHelper.distance(start, end); // This is the total length, not the length in the detector!
 
-        // Save spacecharge corrected mc positions:
-        auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
-        std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX, fMc_StartY, fMc_StartZ);
-        std::vector<double> sce_end = SCE->GetPosOffsets(fMc_EndX, fMc_EndY, fMc_EndZ);
-
-        if (SCE->GetPosOffsets(fMc_StartX, fMc_StartY, fMc_StartZ).size() == 3 && fMc_StartInside)
+        //Find the section that is inside the tpc
+        if (!fMc_StartInside || !fMc_EndInside)
         {
-          fMc_StartX_sce = fMc_StartX - sce_start[0] + 0.7;
-          fMc_StartY_sce = fMc_StartY + sce_start[1];
-          fMc_StartZ_sce = fMc_StartZ + sce_start[2];
+          TVector3 startvec(fMc_StartX, fMc_StartY, fMc_StartZ);
+          TVector3 startdir(fMc_StartMomentumX, fMc_StartMomentumY, fMc_StartMomentumZ);
+          const geo::TPCGeo &theTpcGeo(geo->TPC());
+          std::vector<TVector3> intersections = theTpcGeo.GetIntersections(startvec, startdir);
+          uint num_intersections = intersections.size();
+          if (num_intersections == 0)
+          {
+            fMc_PartInside = false;
+            fMc_LengthTPC = 0;
+          }
+          else if (num_intersections == 1)
+          {
+            if (fMc_StartInside)
+            {
+              fMc_StartX_tpc = fMc_StartX;
+              fMc_StartY_tpc = fMc_StartY;
+              fMc_StartZ_tpc = fMc_StartZ;
+              fMc_EndX_tpc = intersections[0].X();
+              fMc_EndY_tpc = intersections[0].Y();
+              fMc_EndZ_tpc = intersections[0].Z();
+            }
+            else
+            {
+              fMc_EndX_tpc = fMc_EndX;
+              fMc_EndY_tpc = fMc_EndY;
+              fMc_EndZ_tpc = fMc_EndZ;
+              fMc_StartX_tpc = intersections[0].X();
+              fMc_StartY_tpc = intersections[0].Y();
+              fMc_StartZ_tpc = intersections[0].Z();
+            }
+          }
+          else if (num_intersections == 2)
+          {
+            fMc_StartX_tpc = intersections[0].X();
+            fMc_StartY_tpc = intersections[0].Y();
+            fMc_StartZ_tpc = intersections[0].Z();
+            fMc_EndX_tpc = intersections[1].X();
+            fMc_EndY_tpc = intersections[1].Y();
+            fMc_EndZ_tpc = intersections[1].Z();
+          }
         }
-        else
+        else //Start and end are inside
         {
-          fMc_StartX_sce = -9999;
-          fMc_StartY_sce = -9999;
-          fMc_StartZ_sce = -9999;
+          fMc_StartX_tpc = fMc_StartX;
+          fMc_StartY_tpc = fMc_StartY;
+          fMc_StartZ_tpc = fMc_StartZ;
+          fMc_EndX_tpc = fMc_EndX;
+          fMc_EndY_tpc = fMc_EndY;
+          fMc_EndZ_tpc = fMc_EndZ;
         }
 
-        if (SCE->GetPosOffsets(fMc_EndX, fMc_EndY, fMc_EndZ).size() == 3 && fMc_EndInside)
+        if (fMc_PartInside)
         {
-          fMc_EndX_sce = fMc_EndX - sce_end[0] + 0.7;
-          fMc_EndY_sce = fMc_EndY + sce_end[1];
-          fMc_EndZ_sce = fMc_EndZ + sce_end[2];
-        }
-        else
-        {
-          fMc_EndX_sce = -9999;
-          fMc_EndY_sce = -9999;
-          fMc_EndZ_sce = -9999;
-        }
+          std::vector<float> start_tpc = {fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc};
+          std::vector<float> end_tpc = {fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc};
+          fMc_LengthTPC = geoHelper.distance(start_tpc, end_tpc);
 
-        string_process.insert(mcparticle.Process());
+          //Correct the inside tpcpoints for spacecharge
+          auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
+          std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc);
+          std::vector<double> sce_end = SCE->GetPosOffsets(fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc);
 
-        fMCParticlesTree->Fill();
+          fMc_StartX_sce = fMc_StartX_tpc - sce_start[0] + 0.7;
+          fMc_StartY_sce = fMc_StartY_tpc + sce_start[1];
+          fMc_StartZ_sce = fMc_StartZ_tpc + sce_start[2];
+          fMc_EndX_sce = fMc_EndX_tpc - sce_end[0] + 0.7;
+          fMc_EndY_sce = fMc_EndY_tpc + sce_end[1];
+          fMc_EndZ_sce = fMc_EndZ_tpc + sce_end[2];
+
+          fMCParticlesTree->Fill();
+          fNumMcp_saved++; //Counter
+        }
       }
-    }
-
-    std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
-    for (auto elem : string_process)
-    {
-      std::cout << elem << ", ";
     }
   }
 
+  fNumFlashes = optical_handle->size();
+  for (uint ifl = 0; ifl < fNumFlashes; ++ifl)
+  {
+    clear_Flashes();
+
+    recob::OpFlash const &flash = optical_handle->at(ifl);
+    fFlash_TotalPE = flash.TotalPE();
+    fFlash_Time = flash.Time();
+    fFlash_Y = flash.YCenter();
+    fFlash_Z = flash.ZCenter();
+    fFlash_sigmaY = flash.YWidth();
+    fFlash_sigmaZ = flash.ZWidth();
+    fFlash_AbsTime = flash.AbsTime();
+    fFlash_Width = flash.TimeWidth();
+
+    for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
+    {
+      //std::cout << i_pmt << "\t" << fFlash_TotalPE << "\t" << fFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fFlash_num10percentPMT << std::endl;
+      if (flash.PE(i_pmt) > (fFlash_TotalPE / 10.0))
+      {
+        fFlash_num10percentPMT++;
+      }
+    }
+
+    fFlashesTree->Fill();
+  }
+
   fNumPfp = pfparticle_handle->size();
-  for (size_t i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
+  for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
   {
     clear_PFParticle();
 

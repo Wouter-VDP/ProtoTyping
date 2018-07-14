@@ -34,6 +34,7 @@
 #include "lardataobj/RecoBase/Hit.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/Cluster.h"
+#include "lardataobj/RecoBase/OpFlash.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "larcoreobj/SummaryData/POTSummary.h"
@@ -43,6 +44,7 @@
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibProvider.h"
 
 #include "TTree.h"
+#include "TVector3.h"
 
 #include "GeometryHelper.h"
 
@@ -66,6 +68,7 @@ public:
   void clear_MCParticle();
   void clear_PFParticle();
   void clear_Cluster();
+  void clear_Flashes();
   void analyze(art::Event const &e) override;
   void endSubRun(const art::SubRun &sr);
   void reconfigure(fhicl::ParameterSet const &p) override;
@@ -73,15 +76,17 @@ public:
 private:
   // FCL parameters
   std::string m_pfp_producer;
+  std::string m_flash_producer;
   bool m_is_lite;
   bool m_is_data;
-  
 
   // Other firvate fields
   GeometryHelper geoHelper;
+
   std::set<std::string> string_process; // This variable counts the different processes invloved.
 
   const lariov::TPCEnergyCalibProvider &energyCalibProvider = art::ServiceHandle<lariov::TPCEnergyCalibService>()->GetProvider();
+  art::ServiceHandle<geo::Geometry> geo;
   std::map<std::string, uint> map_process =
       {
           {"0", 0},
@@ -110,7 +115,6 @@ private:
           {"primary", 23},
           {"protonInelastic", 24},
       };
-  
 
   // Fields for in the tree!
   TTree *fPOTTree;
@@ -120,30 +124,50 @@ private:
 
   TTree *fMCParticlesTree;
   uint fNumMcp;
-  uint fNumMcp10MeV; // 10 MeV criteria to keep only relevant particles.
+  uint fNumMcp_saved; // criteria to keep only relevant particles.
   float fMc_E;
   int fMc_PdgCode;
   bool fMc_StartInside;
   bool fMc_EndInside;
+  bool fMc_PartInside; // This means that the track is crossing, starts/ends inside, is completely inside.
   float fMc_StartX;
   float fMc_StartY;
   float fMc_StartZ;
-  float fMc_StartX_sce;
+  float fMc_StartX_tpc; // if the track starts outside but crosses, this will be stored here.
+  float fMc_StartY_tpc;
+  float fMc_StartZ_tpc;
+  float fMc_StartX_sce; // spacecharge corrected version of the tpc edge or the inside start end point.
   float fMc_StartY_sce;
   float fMc_StartZ_sce;
   float fMc_EndX;
   float fMc_EndY;
   float fMc_EndZ;
+  float fMc_EndX_tpc;
+  float fMc_EndY_tpc;
+  float fMc_EndZ_tpc;
   float fMc_EndX_sce;
   float fMc_EndY_sce;
   float fMc_EndZ_sce;
   float fMc_Length;
+  float fMc_LengthTPC;
   float fMc_StartMomentumX;
   float fMc_StartMomentumY;
   float fMc_StartMomentumZ;
   uint fMc_Process; // std::string
   int fMc_StatusCode;
   float fMc_Time;
+
+  TTree *fFlashesTree;
+  uint fNumFlashes;
+  float fFlash_Time;
+  uint fFlash_TotalPE;
+  uint fFlash_num10percentPMT; // The number of PMT that is responsible for more than 10% of the total flash.
+  float fFlash_Z;
+  float fFlash_sigmaZ;
+  float fFlash_Y;
+  float fFlash_sigmaY;
+  float fFlash_Width;
+  float fFlash_AbsTime;
 
   TTree *fPFParticlesTree;
   uint fRun, fSubrun, fEvent;
@@ -212,41 +236,66 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
     fMCParticlesTree->Branch("run", &fRun, "run/i");
     fMCParticlesTree->Branch("subrun", &fSubrun, "subrun/i");
     fMCParticlesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
-    fMCParticlesTree->Branch("num_mcp_10MeV", &fNumMcp10MeV, "num_mcp_10MeV/i");
+    fMCParticlesTree->Branch("num_mcp_saved", &fNumMcp_saved, "num_mcp_saved/i");
     fMCParticlesTree->Branch("mc_energy", &fMc_E, "mc_energy/F");
     fMCParticlesTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
     fMCParticlesTree->Branch("mc_status_code", &fMc_StatusCode, "mc_status_code/I");
     fMCParticlesTree->Branch("mc_process", &fMc_Process, "mc_pocess/i");
     fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
     fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
+    fMCParticlesTree->Branch("fMc_part_inside", &fMc_PartInside, "mc_part_inside/O");
     fMCParticlesTree->Branch("mc_time", &fMc_Time, "mc_time/F");
     fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
     fMCParticlesTree->Branch("mc_starty", &fMc_StartY, "mc_starty/F");
     fMCParticlesTree->Branch("mc_startz", &fMc_StartZ, "mc_startz/F");
+    fMCParticlesTree->Branch("mc_startx_tpc", &fMc_StartX_tpc, "mc_startx_tpc/F");
+    fMCParticlesTree->Branch("mc_starty_tpc", &fMc_StartY_tpc, "mc_starty_tpc/F");
+    fMCParticlesTree->Branch("mc_startz_tpc", &fMc_StartZ_tpc, "mc_startz_tpc/F");
     fMCParticlesTree->Branch("mc_startx_sce", &fMc_StartX_sce, "mc_startx_sce/F");
     fMCParticlesTree->Branch("mc_starty_sce", &fMc_StartY_sce, "mc_starty_sce/F");
     fMCParticlesTree->Branch("mc_startz_sce", &fMc_StartZ_sce, "mc_startz_sce/F");
     fMCParticlesTree->Branch("mc_endx", &fMc_EndX, "mc_endx/F");
     fMCParticlesTree->Branch("mc_endy", &fMc_EndY, "mc_endy/F");
     fMCParticlesTree->Branch("mc_endz", &fMc_EndZ, "mc_endz/F");
+    fMCParticlesTree->Branch("mc_endx_tpc", &fMc_EndX_tpc, "mc_endx_tpc/F");
+    fMCParticlesTree->Branch("mc_endy_tpc", &fMc_EndY_tpc, "mc_endy_tpc/F");
+    fMCParticlesTree->Branch("mc_endz_tpc", &fMc_EndZ_tpc, "mc_endz_tpc/F");
     fMCParticlesTree->Branch("mc_endx_sce", &fMc_EndX_sce, "mc_endx_sce/F");
     fMCParticlesTree->Branch("mc_endy_sce", &fMc_EndY_sce, "mc_endy_sce/F");
     fMCParticlesTree->Branch("mc_endz_sce", &fMc_EndZ_sce, "mc_endz_sce/F");
     fMCParticlesTree->Branch("mc_startmomentumx", &fMc_StartMomentumX, "mc_startmomentumx/F");
     fMCParticlesTree->Branch("mc_startmomentumy", &fMc_StartMomentumY, "mc_startmomentumy/F");
     fMCParticlesTree->Branch("mc_startmomentumz", &fMc_StartMomentumZ, "mc_startmomentumz/F");
-    //fMCParticlesTree->Branch("mc_length", &fMc_Len, "mc_length/F");
+    fMCParticlesTree->Branch("mc_length", &fMc_Length, "mc_length/F");
+    fMCParticlesTree->Branch("mc_length_tpc", &fMc_LengthTPC, "mc_length_tpc/F");
   }
+
+  fFlashesTree = tfs->make<TTree>("Flashes", "Flashes Tree");
+  fFlashesTree->Branch("event", &fEvent, "event/i");
+  fFlashesTree->Branch("run", &fRun, "run/i");
+  fFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+  fFlashesTree->Branch("num_flashes", &fNumFlashes, "num_flashes/i");
+  fFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
+  fFlashesTree->Branch("flash_totalPE", &fFlash_TotalPE, "flash_total_PE/i");
+  fFlashesTree->Branch("flash_z", &fFlash_Z, "flash_z/F");
+  fFlashesTree->Branch("flash_sz", &fFlash_sigmaZ, "flash_sz/F");
+  fFlashesTree->Branch("flash_y", &fFlash_Y, "flash_y/F");
+  fFlashesTree->Branch("flash_sy", &fFlash_sigmaY, "flash_sy/F");
+  fFlashesTree->Branch("flash_width", &fFlash_Width , "flash_width/F");
+  fFlashesTree->Branch("flash_abstime", &fFlash_AbsTime , "flash_abstime/F");
+  fFlashesTree->Branch("flash_num_PMT10percent", &fFlash_num10percentPMT , "flash_num_PMT10percent/i");
 
   fPFParticlesTree = tfs->make<TTree>("PFParticles", "PFParticles Tree");
   fPFParticlesTree->Branch("event", &fEvent, "event/i");
   fPFParticlesTree->Branch("run", &fRun, "run/i");
   fPFParticlesTree->Branch("subrun", &fSubrun, "subrun/i");
   fPFParticlesTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
+  fPFParticlesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
+  fPFParticlesTree->Branch("num_mcp_saved", &fNumMcp_saved, "num_mcp_saved/i");
+  fPFParticlesTree->Branch("num_flashes", &fNumFlashes, "num_flashes/i");
   fPFParticlesTree->Branch("pdg_code", &fPdgCode, "pdg_code/I");
-  fPFParticlesTree->Branch("subrun", &fSubrun, "subrun/i");
   fPFParticlesTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
-  fPFParticlesTree->Branch("is_primary", &fIsPrimary, "is_primary/i");
+  fPFParticlesTree->Branch("is_primary", &fIsPrimary, "is_primary/O");
   fPFParticlesTree->Branch("n_hits", &fNhits, "n_hits/i");
   fPFParticlesTree->Branch("n_clusters", &fNclusters, "n_clusters/i");
   fPFParticlesTree->Branch("pfp_vx", &fVx, "pfp_vx/F");
@@ -312,6 +361,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
 void Prototyping::reconfigure(fhicl::ParameterSet const &p)
 {
   m_pfp_producer = p.get<std::string>("pfp_producer", "pandoraNu");
+  m_flash_producer = p.get<std::string>("flash_producer", "opflashCosmic");
   m_is_lite = p.get<bool>("is_lite", true);
   m_is_data = p.get<bool>("is_data", false);
 }
@@ -330,7 +380,8 @@ void Prototyping::clear()
 
   fNumPfp = 0;
   fNumMcp = 0;
-  fNumMcp10MeV = 0;
+  fNumMcp_saved = 0;
+  fNumFlashes = 0;
 }
 
 void Prototyping::clear_Cluster()
@@ -412,7 +463,28 @@ void Prototyping::clear_MCParticle()
   fMc_E = 0;
   fMc_PdgCode = 0;
   fMc_Time = 0;
-  fMc_StatusCode = -9999; //No idea what values this can take
+  fMc_StatusCode = -1; // This is always 1 normally, so put it -1 if something is wrong
   fMc_EndInside = false;
-  fMc_EndInside = false;
+  fMc_StartInside = false;
+  fMc_PartInside = true; // default we say there is a part inside, it gets set to false if no intersections are found.
+  fMc_StartX_tpc = -9999;
+  fMc_StartY_tpc = -9999;
+  fMc_StartZ_tpc = -9999;
+  fMc_EndX_tpc = -9999;
+  fMc_EndY_tpc = -9999;
+  fMc_EndZ_tpc = -9999;
+  fMc_LengthTPC = -9999;
+}
+
+void Prototyping::clear_Flashes()
+{
+  fFlash_Time = -9999;
+  fFlash_TotalPE = 0;
+  fFlash_Z = -9999;
+  fFlash_sigmaZ = -9999;
+  fFlash_Y = -9999;
+  fFlash_sigmaY = -9999;
+  fFlash_num10percentPMT = 0;
+  fFlash_Width = -9999;
+  fFlash_AbsTime = -9999;
 }
