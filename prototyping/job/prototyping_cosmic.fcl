@@ -23,8 +23,10 @@ source:
 }
 
 services: {
-  @table::microboone_basic_services                        # This includes most services you might need
-  #@table::microboone_services_reco                        # Extra services like LArFFT, includes basic
+  #@table::microboone_basic_services                        # This includes most services you might need
+  # Extra services like LArFFT, includes basic
+  @table::microboone_services_reco
+  @table::microboone_simulation_services
 
   scheduler:               { defaultExceptions: false }    # Make all uncaught exceptions fatal.
   TFileService: { fileName: "Prototyping_Cosmic.root" }

@@ -69,9 +69,12 @@ void Prototyping::analyze(art::Event const &evt)
       if (mcparticle.E() > 0.02)
       {
         clear_MCParticle();
-        if (map_process.find(mcparticle.Process()) == map_process.end())
+        if (map_process.find(mcparticle.Process()) != map_process.end())
         {
           fMc_Process = map_process[mcparticle.Process()];
+        }
+        else{
+          std::cout << "[Prototyping::analyze] New MC interaction process found!" << std::endl;
         }
         fMc_Time = mcparticle.T();
         fMc_StatusCode = mcparticle.StatusCode();
@@ -155,8 +158,10 @@ void Prototyping::analyze(art::Event const &evt)
 
           //Correct the inside tpcpoints for spacecharge
           auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
-          std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc);
+          std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc); // Seemingly this results in 0
           std::vector<double> sce_end = SCE->GetPosOffsets(fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc);
+          std::cout << "start_tpc " << fMc_StartX_tpc << ", " << fMc_StartY_tpc << ", " << fMc_StartZ_tpc << std::endl;
+          std::cout << "sce_start " << SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc)[0] << ", " << sce_start[1] << ", " << sce_start[2] << std::endl;
 
           fMc_StartX_sce = fMc_StartX_tpc - sce_start[0] + 0.7;
           fMc_StartY_sce = fMc_StartY_tpc + sce_start[1];

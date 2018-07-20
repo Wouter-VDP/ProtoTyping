@@ -120,7 +120,7 @@ private:
   TTree *fPOTTree;
   uint fRun_sr, fSubrun_sr;
   float fPot;
-  uint fNevents;
+  uint fNevents = 0;
 
   TTree *fMCParticlesTree;
   uint fNumMcp;
@@ -372,7 +372,7 @@ void Prototyping::clear()
   fRun_sr = 0;
   fSubrun_sr = 0;
   fPot = 0;
-  fNevents = 0;
+  //fNevents = 0; we do not want to clear this, just count all events.
 
   fRun = 0;
   fSubrun = 0;

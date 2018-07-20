@@ -3,12 +3,12 @@
 <!ENTITY name "data_ext_v10_pandoracosmic">
 <!ENTITY version "v06_26_01_13">
 <!ENTITY qualifier "e10:prof">
-<!ENTITY dataset "prod_reco2_extunbiased_v10_mcc8">
+<!ENTITY dataset "wvdp_prod_reco2_extunbiased_v10_mcc8_v4">
 <!ENTITY user "wvdp">
 ]>
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>179227</numevents>
+    <numevents>178391</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -33,7 +33,7 @@
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>404</numjobs>
+        <numjobs>377</numjobs>
         <disk>5GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>14</maxfilesperjob>
