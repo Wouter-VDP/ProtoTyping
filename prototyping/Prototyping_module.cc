@@ -39,14 +39,21 @@ void Prototyping::analyze(art::Event const &evt)
   fEvent = evt.id().event();
   fNevents++;
 
+  // Check if there is a prescale factor for a certain data trigger and stor it
+  if (m_is_data)
+  {
+    art::Handle<raw::ubdaqSoftwareTriggerData> SWTriggerHandle;
+    evt.getByLabel("daq", SWTriggerHandle);
+    //fDatasetPrescaleFactor = SWTriggerHandle->getPrescale("EXT_NUMIwin_FEMBeamTriggerAlgo"); //"EXT_unbiased_PrescaleAlgo");
+    std::cout << "[Prototyping constructor] Prescale factor for  EXT_unbiased_PrescaleAlgo is " << fDatasetPrescaleFactor << std::endl;
+  }
+
   // Initialise the handles and associations
-  auto const &pfparticle_handle =
-      evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
-  auto const &cluster_handle =
-      evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
-  auto const &spacepoint_handle =
-      evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
-  auto const &optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_flash_producer);
+  auto const &pfparticle_handle = evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
+  auto const &cluster_handle = evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
+  auto const &spacepoint_handle = evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
+  auto const &cosmic_optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_flash_producer);
+  auto const &beam_optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_flash_producer);
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
@@ -73,7 +80,8 @@ void Prototyping::analyze(art::Event const &evt)
         {
           fMc_Process = map_process[mcparticle.Process()];
         }
-        else{
+        else
+        {
           std::cout << "[Prototyping::analyze] New MC interaction process found!" << std::endl;
         }
         fMc_Time = mcparticle.T();
@@ -160,8 +168,8 @@ void Prototyping::analyze(art::Event const &evt)
           auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
           std::vector<double> sce_start = SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc); // Seemingly this results in 0
           std::vector<double> sce_end = SCE->GetPosOffsets(fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc);
-          std::cout << "start_tpc " << fMc_StartX_tpc << ", " << fMc_StartY_tpc << ", " << fMc_StartZ_tpc << std::endl;
-          std::cout << "sce_start " << SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc)[0] << ", " << sce_start[1] << ", " << sce_start[2] << std::endl;
+          //std::cout << "start_tpc " << fMc_StartX_tpc << ", " << fMc_StartY_tpc << ", " << fMc_StartZ_tpc << std::endl;
+          //std::cout << "sce_start " << SCE->GetPosOffsets(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc)[0] << ", " << sce_start[1] << ", " << sce_start[2] << std::endl;
 
           fMc_StartX_sce = fMc_StartX_tpc - sce_start[0] + 0.7;
           fMc_StartY_sce = fMc_StartY_tpc + sce_start[1];
@@ -177,33 +185,63 @@ void Prototyping::analyze(art::Event const &evt)
     }
   }
 
-  fNumFlashes = optical_handle->size();
-  for (uint ifl = 0; ifl < fNumFlashes; ++ifl)
+  //// Filling the cosmic flashes
+  fNumCosmicFlashes = cosmic_optical_handle->size();
+  for (uint ifl = 0; ifl < fNumCosmicFlashes; ++ifl)
   {
-    clear_Flashes();
+    clear_CosmicFlashes();
 
-    recob::OpFlash const &flash = optical_handle->at(ifl);
-    fFlash_TotalPE = flash.TotalPE();
-    fFlash_Time = flash.Time();
-    fFlash_Y = flash.YCenter();
-    fFlash_Z = flash.ZCenter();
-    fFlash_sigmaY = flash.YWidth();
-    fFlash_sigmaZ = flash.ZWidth();
-    fFlash_AbsTime = flash.AbsTime();
-    fFlash_Width = flash.TimeWidth();
+    recob::OpFlash const &flash = cosmic_optical_handle->at(ifl);
+    fCosmicFlash_TotalPE = flash.TotalPE();
+    fCosmicFlash_Time = flash.Time();
+    fCosmicFlash_Y = flash.YCenter();
+    fCosmicFlash_Z = flash.ZCenter();
+    fCosmicFlash_sigmaY = flash.YWidth();
+    fCosmicFlash_sigmaZ = flash.ZWidth();
+    fCosmicFlash_AbsTime = flash.AbsTime();
+    fCosmicFlash_Width = flash.TimeWidth();
 
     for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
     {
-      //std::cout << i_pmt << "\t" << fFlash_TotalPE << "\t" << fFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fFlash_num10percentPMT << std::endl;
-      if (flash.PE(i_pmt) > (fFlash_TotalPE / 10.0))
+      //std::cout << i_pmt << "\t" << fCosmicFlash_TotalPE << "\t" << fCosmicFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fCosmicFlash_num10percentPMT << std::endl;
+      if (flash.PE(i_pmt) > (fCosmicFlash_TotalPE / 10.0))
       {
-        fFlash_num10percentPMT++;
+        fCosmicFlash_num10percentPMT++;
       }
     }
 
-    fFlashesTree->Fill();
+    fCosmicFlashesTree->Fill();
   }
 
+  //// Filling the beam flashes
+    fNumBeamFlashes = beam_optical_handle->size();
+  for (uint ifl = 0; ifl < fNumBeamFlashes; ++ifl)
+  {
+    clear_BeamFlashes();
+
+    recob::OpFlash const &flash = beam_optical_handle->at(ifl);
+    fBeamFlash_TotalPE = flash.TotalPE();
+    fBeamFlash_Time = flash.Time();
+    fBeamFlash_Y = flash.YCenter();
+    fBeamFlash_Z = flash.ZCenter();
+    fBeamFlash_sigmaY = flash.YWidth();
+    fBeamFlash_sigmaZ = flash.ZWidth();
+    fBeamFlash_AbsTime = flash.AbsTime();
+    fBeamFlash_Width = flash.TimeWidth();
+
+    for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
+    {
+      //std::cout << i_pmt << "\t" << fBeamFlash_TotalPE << "\t" << fBeamFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fBeamFlash_num10percentPMT << std::endl;
+      if (flash.PE(i_pmt) > (fBeamFlash_TotalPE / 10.0))
+      {
+        fBeamFlash_num10percentPMT++;
+      }
+    }
+
+    fBeamFlashesTree->Fill();
+  }
+
+  /// PF Particle Tree
   fNumPfp = pfparticle_handle->size();
   for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
   {
