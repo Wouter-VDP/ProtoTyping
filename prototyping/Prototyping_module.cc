@@ -44,7 +44,7 @@ void Prototyping::analyze(art::Event const &evt)
   {
     art::Handle<raw::ubdaqSoftwareTriggerData> SWTriggerHandle;
     evt.getByLabel("daq", SWTriggerHandle);
-    //fDatasetPrescaleFactor = SWTriggerHandle->getPrescale("EXT_NUMIwin_FEMBeamTriggerAlgo"); //"EXT_unbiased_PrescaleAlgo");
+    fDatasetPrescaleFactor = SWTriggerHandle->getPrescale("EXT_unbiased_PrescaleAlgo");
     std::cout << "[Prototyping constructor] Prescale factor for  EXT_unbiased_PrescaleAlgo is " << fDatasetPrescaleFactor << std::endl;
   }
 
@@ -109,7 +109,11 @@ void Prototyping::analyze(art::Event const &evt)
         {
           TVector3 startvec(fMc_StartX, fMc_StartY, fMc_StartZ);
           TVector3 startdir(fMc_StartMomentumX, fMc_StartMomentumY, fMc_StartMomentumZ);
-          const geo::TPCGeo &theTpcGeo(geo->TPC());
+          geo::TPCGeo const & thisTPC =  geo->TPC();
+          //std::cout << "thisTPC.ActiveHalfHeight(): " << thisTPC.ActiveHalfHeight() << std::endl;
+          //std::cout << "thisTPC.HalfHeight(): " << thisTPC.HalfHeight() << std::endl;
+          const geo::BoxBoundedGeo &theTpcGeo(thisTPC);
+          //std::cout << "This is a geometry test: " << theTpcGeo.MaxX() << ", " << theTpcGeo.MaxY() << ", " << theTpcGeo.MaxZ() << std::endl;
           std::vector<TVector3> intersections = theTpcGeo.GetIntersections(startvec, startdir);
           uint num_intersections = intersections.size();
           if (num_intersections == 0)
@@ -209,7 +213,7 @@ void Prototyping::analyze(art::Event const &evt)
         fCosmicFlash_num10percentPMT++;
       }
     }
-
+    //std::cout << "fNumCosmicFlashes: " << fNumCosmicFlashes << std::endl;
     fCosmicFlashesTree->Fill();
   }
 
@@ -237,7 +241,6 @@ void Prototyping::analyze(art::Event const &evt)
         fBeamFlash_num10percentPMT++;
       }
     }
-
     fBeamFlashesTree->Fill();
   }
 
@@ -382,6 +385,7 @@ void Prototyping::analyze(art::Event const &evt)
       }
     }
   }
+  fEventTree->Fill();
 }
 
 DEFINE_ART_MODULE(Prototyping)

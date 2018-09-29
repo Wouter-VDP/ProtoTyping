@@ -7,7 +7,7 @@
 class GeometryHelper
 {
   public:
-    GeometryHelper() = default;
+    GeometryHelper();
     ~GeometryHelper() = default;
 
     bool isActive(const std::vector<float> &x) const;
@@ -26,6 +26,16 @@ bool GeometryHelper::isActive(const std::vector<float> &x) const
     }
 
     return this->isActive(&x[0]);
+}
+
+GeometryHelper::GeometryHelper()
+{
+    //// Check if things are set up properly:
+    std::cout << std::endl;
+    std::cout << "[GeometryHelper constructor] Checking set-up" << std::endl;
+    art::ServiceHandle<geo::Geometry> geo;
+    std::cout << "[GeometryHelper constructor] Detector dimensions from geo: "
+              << 2.0 * geo->DetHalfWidth() << ", " << geo->DetHalfHeight() << ", " << geo->DetLength() << std::endl;
 }
 
 bool GeometryHelper::isActive(const float x[3]) const

@@ -127,6 +127,8 @@ private:
   float fDatasetPrescaleFactor; // Prescaling factor for data.
   uint fNevents = 0;
 
+  TTree *fEventTree;
+
   TTree *fMCParticlesTree;
   uint fNumMcp;
   uint fNumMcp_saved; // criteria to keep only relevant particles.
@@ -186,7 +188,6 @@ private:
   float fCosmicFlash_Width;
   float fCosmicFlash_AbsTime;
 
-
   TTree *fPFParticlesTree;
   uint fRun, fSubrun, fEvent;
   uint fNumPfp;
@@ -242,25 +243,40 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   //// Check if things are set up properly:
   std::cout << std::endl;
   std::cout << "[Prototyping constructor] Checking set-up" << std::endl;
-  //// Check if spacecharge correction is working 
-  auto const* SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
+  //// Check if spacecharge correction is working
+  auto const *SCE = lar::providerFrom<spacecharge::SpaceChargeService>();
   std::vector<double> sce_start = SCE->GetPosOffsets(25, 110, 250); // Seemingly this results in 0
-  auto scecorr = SCE->GetPosOffsets(25,110,250);
+  auto scecorr = SCE->GetPosOffsets(25, 110, 250);
   //double g4Ticks = detClocks->TPCG4Time2Tick(mct.GetNeutrino().Lepton().T())+theDetector->GetXTicksOffset(0,0,0)-theDetector->TriggerOffset();
   //double xOffset = theDetector->ConvertTicksToX(g4Ticks, 0, 0, 0)-scecorr[0];
   double yOffset = scecorr[1];
   double zOffset = scecorr[2];
-  std::cout << "spacecharge correction at test point " << yOffset << ", " << yOffset << ", " << zOffset << std::endl;
+  std::cout << "[Prototyping constructor] Spacecharge correction at test point " << yOffset << ", " << yOffset << ", " << zOffset << std::endl;
   std::cout << std::endl;
   //// End set up tests
 
+  //// Tree for every subrun
   fPOTTree = tfs->make<TTree>("pot", "POT Tree");
   fPOTTree->Branch("run", &fRun_sr, "run/i");
   fPOTTree->Branch("subrun", &fSubrun_sr, "subrun/i");
   fPOTTree->Branch("pot", &fPot, "pot/d");
   fPOTTree->Branch("n_events", &fNevents, "n_events/i");
 
-  //Currently there is no tree for the event itself
+  //// Tree for every event
+  fEventTree = tfs->make<TTree>("Event", "Event Tree");
+  fEventTree->Branch("run", &fRun_sr, "run/i");
+  fEventTree->Branch("subrun", &fSubrun_sr, "subrun/i");
+  fEventTree->Branch("pot", &fPot, "pot/d");
+  fEventTree->Branch("n_events", &fNevents, "n_events/i");
+  fEventTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+  fEventTree->Branch("num_beam_flashes", &fNumBeamFlashes, "num_beam_flashes/i");
+  fEventTree->Branch("num_cosmic_flashes", &fNumBeamFlashes, "num_cosmic_flashes/i");
+  fEventTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
+  if (!m_is_data)
+  {
+    fEventTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
+    fEventTree->Branch("num_mcp_saved", &fNumMcp_saved, "num_mcp_saved/i");
+  }
 
   //// Tree for MC particles
   if (!m_is_data)
@@ -326,7 +342,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fCosmicFlashesTree->Branch("run", &fRun, "run/i");
   fCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
   fCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
-  fCosmicFlashesTree->Branch("num_flashes", &fNumBeamFlashes, "num_flashes/i");
+  fCosmicFlashesTree->Branch("num_flashes", &fNumCosmicFlashes, "num_flashes/i");
   fCosmicFlashesTree->Branch("flash_time", &fCosmicFlash_Time, "flash_time/F");
   fCosmicFlashesTree->Branch("flash_totalPE", &fCosmicFlash_TotalPE, "flash_total_PE/i");
   fCosmicFlashesTree->Branch("flash_z", &fCosmicFlash_Z, "flash_z/F");
@@ -337,6 +353,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fCosmicFlashesTree->Branch("flash_abstime", &fCosmicFlash_AbsTime, "flash_abstime/F");
   fCosmicFlashesTree->Branch("flash_num_PMT10percent", &fCosmicFlash_num10percentPMT, "flash_num_PMT10percent/i");
 
+  //// Tree for the PF particles
   fPFParticlesTree = tfs->make<TTree>("PFParticles", "PFParticles Tree");
   fPFParticlesTree->Branch("event", &fEvent, "event/i");
   fPFParticlesTree->Branch("run", &fRun, "run/i");
@@ -384,7 +401,6 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fClustersTree->Branch("n_hits", &fClusterNhits, "n_hits/i");
   fClustersTree->Branch("plane", &fClusterPlane, "plane/i");
   fClustersTree->Branch("position", &fClusterPosition, "position/F");
-
 }
 
 void Prototyping::reconfigure(fhicl::ParameterSet const &p)
@@ -465,7 +481,7 @@ void Prototyping::clear_PFParticle()
   //shower
 }
 
-// Clear once per MC particle 
+// Clear once per MC particle
 void Prototyping::clear_MCParticle()
 {
   fMc_EndX = -9999;
