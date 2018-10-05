@@ -52,8 +52,11 @@ void Prototyping::analyze(art::Event const &evt)
   auto const &pfparticle_handle = evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
   auto const &cluster_handle = evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle = evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
-  auto const &cosmic_optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_flash_producer);
-  auto const &beam_optical_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_flash_producer);
+
+  art::ValidHandle<std::vector<recob::OpFlash> > const &simple_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_simpleflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash> > const &op_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_opflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash> > const &simple_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_simpleflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash> > const &op_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_opflash_producer);
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
@@ -109,7 +112,7 @@ void Prototyping::analyze(art::Event const &evt)
         {
           TVector3 startvec(fMc_StartX, fMc_StartY, fMc_StartZ);
           TVector3 startdir(fMc_StartMomentumX, fMc_StartMomentumY, fMc_StartMomentumZ);
-          geo::TPCGeo const & thisTPC =  geo->TPC();
+          geo::TPCGeo const &thisTPC = geo->TPC();
           //std::cout << "thisTPC.ActiveHalfHeight(): " << thisTPC.ActiveHalfHeight() << std::endl;
           //std::cout << "thisTPC.HalfHeight(): " << thisTPC.HalfHeight() << std::endl;
           const geo::BoxBoundedGeo &theTpcGeo(thisTPC);
@@ -189,61 +192,25 @@ void Prototyping::analyze(art::Event const &evt)
     }
   }
 
-  //// Filling the cosmic flashes
-  fNumCosmicFlashes = cosmic_optical_handle->size();
-  for (uint ifl = 0; ifl < fNumCosmicFlashes; ++ifl)
-  {
-    clear_CosmicFlashes();
+  //// Filling the flashes
+  fNumSimpleBeamFlashes = simple_beam_handle->size();
+  std::cout << "[ProtoTyping] fNumSimpleBeamFlashes: " << fNumSimpleBeamFlashes << std::endl;
+  fill_flash( simple_beam_handle, fNumSimpleBeamFlashes, fSimpleBeamFlashesTree );
 
-    recob::OpFlash const &flash = cosmic_optical_handle->at(ifl);
-    fCosmicFlash_TotalPE = flash.TotalPE();
-    fCosmicFlash_Time = flash.Time();
-    fCosmicFlash_Y = flash.YCenter();
-    fCosmicFlash_Z = flash.ZCenter();
-    fCosmicFlash_sigmaY = flash.YWidth();
-    fCosmicFlash_sigmaZ = flash.ZWidth();
-    fCosmicFlash_AbsTime = flash.AbsTime();
-    fCosmicFlash_Width = flash.TimeWidth();
+  fNumOpBeamFlashes = op_beam_handle->size();
+  std::cout << "[ProtoTyping] fNumOpBeamFlashes: " << fNumOpBeamFlashes << std::endl;
+  fill_flash( op_beam_handle, fNumOpBeamFlashes, fOpBeamFlashesTree );
 
-    for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
-    {
-      //std::cout << i_pmt << "\t" << fCosmicFlash_TotalPE << "\t" << fCosmicFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fCosmicFlash_num10percentPMT << std::endl;
-      if (flash.PE(i_pmt) > (fCosmicFlash_TotalPE / 10.0))
-      {
-        fCosmicFlash_num10percentPMT++;
-      }
-    }
-    //std::cout << "fNumCosmicFlashes: " << fNumCosmicFlashes << std::endl;
-    fCosmicFlashesTree->Fill();
-  }
+  fNumSimpleCosmicFlashes = simple_cosmic_handle->size();
+  std::cout << "[ProtoTyping] fNumSimpleCosmicFlashes: " << fNumSimpleCosmicFlashes << std::endl;
+  fill_flash( simple_cosmic_handle, fNumSimpleCosmicFlashes, fSimpleCosmicFlashesTree );
 
-  //// Filling the beam flashes
-    fNumBeamFlashes = beam_optical_handle->size();
-  for (uint ifl = 0; ifl < fNumBeamFlashes; ++ifl)
-  {
-    clear_BeamFlashes();
+  fNumOpCosmicFlashes = op_cosmic_handle->size();
+  std::cout << "[ProtoTyping] fNumOpCosmicFlashes: " << fNumOpCosmicFlashes << std::endl;
+  fill_flash( op_cosmic_handle, fNumOpCosmicFlashes, fOpCosmicFlashesTree );
 
-    recob::OpFlash const &flash = beam_optical_handle->at(ifl);
-    fBeamFlash_TotalPE = flash.TotalPE();
-    fBeamFlash_Time = flash.Time();
-    fBeamFlash_Y = flash.YCenter();
-    fBeamFlash_Z = flash.ZCenter();
-    fBeamFlash_sigmaY = flash.YWidth();
-    fBeamFlash_sigmaZ = flash.ZWidth();
-    fBeamFlash_AbsTime = flash.AbsTime();
-    fBeamFlash_Width = flash.TimeWidth();
 
-    for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
-    {
-      //std::cout << i_pmt << "\t" << fBeamFlash_TotalPE << "\t" << fBeamFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fBeamFlash_num10percentPMT << std::endl;
-      if (flash.PE(i_pmt) > (fBeamFlash_TotalPE / 10.0))
-      {
-        fBeamFlash_num10percentPMT++;
-      }
-    }
-    fBeamFlashesTree->Fill();
-  }
-
+  
   /// PF Particle Tree
   fNumPfp = pfparticle_handle->size();
   for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
@@ -280,25 +247,18 @@ void Prototyping::analyze(art::Event const &evt)
       std::vector<art::Ptr<recob::Hit>> hits = hits_per_cluster.at(cluster.key());
       for (art::Ptr<recob::Hit> &hit : hits)
       {
-        fPlane = hit->WireID().Plane;
-        if (fPlane == 0)
+        uint plane = hit->WireID().Plane;
+        if (plane == 0)
         {
           fNhitsU += 1;
         }
-        else if (fPlane == 1)
+        else if (plane == 1)
         {
           fNhitsV += 1;
         }
-        else if (fPlane == 2)
+        else if (plane == 2)
         {
           fNhitsY += 1;
-        }
-
-        if (m_is_lite == false)
-        {
-          fWire = hit->WireID().Wire;
-          fCharge = hit->Integral();
-          fHitsTree->Fill();
         }
       }
     }
@@ -350,42 +310,45 @@ void Prototyping::analyze(art::Event const &evt)
     {
       std::cout << "No vertex found for " << fPdgCode << " with " << fNhits << std::endl;
     }
-
     fPFParticlesTree->Fill();
-
-    if (m_is_lite == false)
-    {
-      // Space points
-      std::vector<art::Ptr<recob::SpacePoint>> spcpnts = spcpnts_per_pfpart.at(i_pfp);
-      for (art::Ptr<recob::SpacePoint> &sps : spcpnts)
-      {
-        auto xyz = sps->XYZ();
-        fx = xyz[0];
-        fy = xyz[1];
-        fz = xyz[2];
-
-        std::vector<art::Ptr<recob::Hit>> hits = hits_per_spcpnts.at(sps.key());
-        fChargeU = 0;
-        fChargeV = 0;
-        fChargeY = 0;
-        for (art::Ptr<recob::Hit> &hit : hits)
-        {
-          double hit_plane = hit->WireID().Plane;
-          double hit_integral = hit->Integral();
-          if (hit_plane == 0)
-            fChargeU += hit_integral;
-          else if (hit_plane == 1)
-            fChargeV += hit_integral;
-          else if (hit_plane == 2)
-            fChargeY += hit_integral;
-          else
-            std::cout << "hit plane != 0, 1, 2, but " << hit_plane << std::endl;
-        }
-        fSpacePointsTree->Fill();
-      }
-    }
   }
   fEventTree->Fill();
 }
+
+
+void Prototyping::fill_flash(art::ValidHandle<std::vector<recob::OpFlash> > const &flash_handle, uint number, TTree *tree)
+{
+  for (uint ifl = 0; ifl < number; ++ifl)
+  {
+    clear_Flashes();
+
+    recob::OpFlash const &flash = flash_handle->at(ifl);
+    fFlash_TotalPE = flash.TotalPE();
+    fFlash_Time = flash.Time();
+    fFlash_Y = flash.YCenter();
+    fFlash_Z = flash.ZCenter();
+    fFlash_sigmaY = flash.YWidth();
+    fFlash_sigmaZ = flash.ZWidth();
+    fFlash_AbsTime = flash.AbsTime();
+    fFlash_Width = flash.TimeWidth();
+
+    if (m_verb)
+    {
+      std::cout << "[Prototyping::fill_flash] flash: time " <<  flash.Time() << "\twidth " << flash.TimeWidth() << "\tPE " << flash.TotalPE() << std::endl;
+    }
+
+    for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
+    {
+      //std::cout << i_pmt << "\t" << fFlash_TotalPE << "\t" << fFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fFlash_num10percentPMT << std::endl;
+      if (flash.PE(i_pmt) > (fFlash_TotalPE / 10.0))
+      {
+        fFlash_num10percentPMT++;
+      }
+    }
+    tree->Fill();
+  }
+}
+
+
 
 DEFINE_ART_MODULE(Prototyping)

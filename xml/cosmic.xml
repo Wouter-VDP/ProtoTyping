@@ -3,12 +3,12 @@
 <!ENTITY name "opencosmic83_pandoracosmic">
 <!ENTITY version "v06_26_01_13">
 <!ENTITY qualifier "e10:prof">
-<!ENTITY dataset "prodcosmics_corsika_cmc_uboone_mcc8.3_reco2">
+<!ENTITY dataset "wvdp_prodcosmics_corsika_cmc_uboone_mcc8.3_reco2_dev">
 <!ENTITY user "wvdp">
 ]>
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>200000</numevents>
+    <numevents>250000</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -21,7 +21,7 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/MCC87_7_13_0s0t.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/localprod_9_30_0s0t.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -33,10 +33,10 @@
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>286</numjobs>
+        <numjobs>358</numjobs>
         <disk>5GB</disk>
-        <memory>1900</memory>
-        <maxfilesperjob>14</maxfilesperjob>
+        <memory>1999</memory>
+        <maxfilesperjob>7</maxfilesperjob>
         <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       

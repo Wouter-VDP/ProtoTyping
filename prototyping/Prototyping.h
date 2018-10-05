@@ -69,20 +69,27 @@ public:
   void clear_MCParticle();
   void clear_PFParticle();
   void clear_Cluster();
-  void clear_BeamFlashes();
-  void clear_CosmicFlashes();
+  void clear_Flashes();
   // see cc file
   void analyze(art::Event const &e) override;
   void endSubRun(const art::SubRun &sr);
   void reconfigure(fhicl::ParameterSet const &p) override;
 
+  void fill_flash(art::ValidHandle<std::vector<recob::OpFlash>> const &simple_cosmic_handle, uint number, TTree *tree);
+
 private:
   // FCL parameters
   std::string m_pfp_producer;
-  std::string m_cosmic_flash_producer;
-  std::string m_beam_flash_producer;
+  std::string m_cosmic_opflash_producer;
+  std::string m_cosmic_simpleflash_producer;
+  std::string m_cosmic_ophit_producer;
+  std::string m_beam_opflash_producer;
+  std::string m_beam_simpleflash_producer;
+  std::string m_beam_ophit_producer;
+
   bool m_is_lite;
   bool m_is_data;
+  bool m_verb;
 
   // Other firvate fields
   GeometryHelper geoHelper;
@@ -128,10 +135,16 @@ private:
   uint fNevents = 0;
 
   TTree *fEventTree;
-
-  TTree *fMCParticlesTree;
+  uint fRun, fSubrun, fEvent;
+  uint fNumSimpleBeamFlashes;
+  uint fNumOpBeamFlashes;
+  uint fNumSimpleCosmicFlashes;
+  uint fNumOpCosmicFlashes;
   uint fNumMcp;
   uint fNumMcp_saved; // criteria to keep only relevant particles.
+  uint fNumPfp;
+
+  TTree *fMCParticlesTree;
   float fMc_E;
   int fMc_PdgCode;
   bool fMc_StartInside;
@@ -164,33 +177,21 @@ private:
   int fMc_StatusCode;
   float fMc_Time;
 
-  TTree *fBeamFlashesTree;
-  uint fNumBeamFlashes;
-  float fBeamFlash_Time;
-  uint fBeamFlash_TotalPE;
-  uint fBeamFlash_num10percentPMT; // The number of PMT that is responsible for more than 10% of the total flash.
-  float fBeamFlash_Z;
-  float fBeamFlash_sigmaZ;
-  float fBeamFlash_Y;
-  float fBeamFlash_sigmaY;
-  float fBeamFlash_Width;
-  float fBeamFlash_AbsTime;
-
-  TTree *fCosmicFlashesTree;
-  uint fNumCosmicFlashes;
-  float fCosmicFlash_Time;
-  uint fCosmicFlash_TotalPE;
-  uint fCosmicFlash_num10percentPMT; // The number of PMT that is responsible for more than 10% of the total flash.
-  float fCosmicFlash_Z;
-  float fCosmicFlash_sigmaZ;
-  float fCosmicFlash_Y;
-  float fCosmicFlash_sigmaY;
-  float fCosmicFlash_Width;
-  float fCosmicFlash_AbsTime;
+  TTree *fSimpleCosmicFlashesTree;
+  TTree *fOpCosmicFlashesTree;
+  TTree *fSimpleBeamFlashesTree;
+  TTree *fOpBeamFlashesTree;
+  float fFlash_Time;
+  uint fFlash_TotalPE;
+  uint fFlash_num10percentPMT; // The number of PMT that is responsible for more than 10% of the total flash.
+  float fFlash_Z;
+  float fFlash_sigmaZ;
+  float fFlash_Y;
+  float fFlash_sigmaY;
+  float fFlash_Width;
+  float fFlash_AbsTime;
 
   TTree *fPFParticlesTree;
-  uint fRun, fSubrun, fEvent;
-  uint fNumPfp;
   int fPdgCode;
   uint fNumDaughters;
   bool fIsPrimary;
@@ -222,14 +223,6 @@ private:
   TTree *fClustersTree;
   float fClusterCharge, fClusterWidth, fClusterPosition;
   uint fClusterNhits, fClusterPlane;
-
-  TTree *fHitsTree;
-  uint fPlane;
-  uint fWire;
-  float fCharge;
-
-  TTree *fSpacePointsTree;
-  float fx, fy, fz, fChargeU, fChargeV, fChargeY;
 };
 
 Prototyping::Prototyping(fhicl::ParameterSet const &p)
@@ -269,8 +262,10 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fEventTree->Branch("pot", &fPot, "pot/d");
   fEventTree->Branch("n_events", &fNevents, "n_events/i");
   fEventTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
-  fEventTree->Branch("num_beam_flashes", &fNumBeamFlashes, "num_beam_flashes/i");
-  fEventTree->Branch("num_cosmic_flashes", &fNumBeamFlashes, "num_cosmic_flashes/i");
+  fEventTree->Branch("num_simplebeamflashes", &fNumSimpleBeamFlashes, "num_simplebeamflashes/i");
+  fEventTree->Branch("num_opcosmic_flashes", &fNumOpBeamFlashes, "num_opcosmic_flashes/i");
+  fEventTree->Branch("num_opbeamflashes", &fNumOpBeamFlashes, "num_simplebeamflashes/i");
+  fEventTree->Branch("num_simplecosmic_flashes", &fNumSimpleBeamFlashes, "num_opcosmic_flashes/i");
   fEventTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
   if (!m_is_data)
   {
@@ -321,37 +316,70 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   }
 
   //// Tree for beam flashes
-  fBeamFlashesTree = tfs->make<TTree>("BeamFlashes", "BeamFlashes Tree");
-  fBeamFlashesTree->Branch("event", &fEvent, "event/i");
-  fBeamFlashesTree->Branch("run", &fRun, "run/i");
-  fBeamFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
-  fBeamFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
-  fBeamFlashesTree->Branch("num_flashes", &fNumBeamFlashes, "num_flashes/i");
-  fBeamFlashesTree->Branch("flash_time", &fBeamFlash_Time, "flash_time/F");
-  fBeamFlashesTree->Branch("flash_totalPE", &fBeamFlash_TotalPE, "flash_total_PE/i");
-  fBeamFlashesTree->Branch("flash_z", &fBeamFlash_Z, "flash_z/F");
-  fBeamFlashesTree->Branch("flash_sz", &fBeamFlash_sigmaZ, "flash_sz/F");
-  fBeamFlashesTree->Branch("flash_y", &fBeamFlash_Y, "flash_y/F");
-  fBeamFlashesTree->Branch("flash_sy", &fBeamFlash_sigmaY, "flash_sy/F");
-  fBeamFlashesTree->Branch("flash_width", &fBeamFlash_Width, "flash_width/F");
-  fBeamFlashesTree->Branch("flash_abstime", &fBeamFlash_AbsTime, "flash_abstime/F");
-  fBeamFlashesTree->Branch("flash_num_PMT10percent", &fBeamFlash_num10percentPMT, "flash_num_PMT10percent/i");
+  fOpBeamFlashesTree = tfs->make<TTree>("OpBeamFlashes", "OpBeamFlashes Tree");
+  fOpBeamFlashesTree->Branch("event", &fEvent, "event/i");
+  fOpBeamFlashesTree->Branch("run", &fRun, "run/i");
+  fOpBeamFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+  fOpBeamFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+  fOpBeamFlashesTree->Branch("num_flashes", &fNumOpBeamFlashes, "num_flashes/i");
+  fOpBeamFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
+  fOpBeamFlashesTree->Branch("flash_totalPE", &fFlash_TotalPE, "flash_total_PE/i");
+  fOpBeamFlashesTree->Branch("flash_z", &fFlash_Z, "flash_z/F");
+  fOpBeamFlashesTree->Branch("flash_sz", &fFlash_sigmaZ, "flash_sz/F");
+  fOpBeamFlashesTree->Branch("flash_y", &fFlash_Y, "flash_y/F");
+  fOpBeamFlashesTree->Branch("flash_sy", &fFlash_sigmaY, "flash_sy/F");
+  fOpBeamFlashesTree->Branch("flash_width", &fFlash_Width, "flash_width/F");
+  fOpBeamFlashesTree->Branch("flash_abstime", &fFlash_AbsTime, "flash_abstime/F");
+  fOpBeamFlashesTree->Branch("flash_num_PMT10percent", &fFlash_num10percentPMT, "flash_num_PMT10percent/i");
+
+  fSimpleBeamFlashesTree = tfs->make<TTree>("SimpleBeamFlashes", "SimpleBeamFlashes Tree");
+  fSimpleBeamFlashesTree->Branch("event", &fEvent, "event/i");
+  fSimpleBeamFlashesTree->Branch("run", &fRun, "run/i");
+  fSimpleBeamFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+  fSimpleBeamFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+  fSimpleBeamFlashesTree->Branch("num_flashes", &fNumSimpleBeamFlashes, "num_flashes/i");
+  fSimpleBeamFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
+  fSimpleBeamFlashesTree->Branch("flash_totalPE", &fFlash_TotalPE, "flash_total_PE/i");
+  fSimpleBeamFlashesTree->Branch("flash_z", &fFlash_Z, "flash_z/F");
+  fSimpleBeamFlashesTree->Branch("flash_sz", &fFlash_sigmaZ, "flash_sz/F");
+  fSimpleBeamFlashesTree->Branch("flash_y", &fFlash_Y, "flash_y/F");
+  fSimpleBeamFlashesTree->Branch("flash_sy", &fFlash_sigmaY, "flash_sy/F");
+  fSimpleBeamFlashesTree->Branch("flash_width", &fFlash_Width, "flash_width/F");
+  fSimpleBeamFlashesTree->Branch("flash_abstime", &fFlash_AbsTime, "flash_abstime/F");
+  fSimpleBeamFlashesTree->Branch("flash_num_PMT10percent", &fFlash_num10percentPMT, "flash_num_PMT10percent/i");
+
   //// Tree for cosmic flashes
-  fCosmicFlashesTree = tfs->make<TTree>("CosmicFlashes", "CosmicFlashes Tree");
-  fCosmicFlashesTree->Branch("event", &fEvent, "event/i");
-  fCosmicFlashesTree->Branch("run", &fRun, "run/i");
-  fCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
-  fCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
-  fCosmicFlashesTree->Branch("num_flashes", &fNumCosmicFlashes, "num_flashes/i");
-  fCosmicFlashesTree->Branch("flash_time", &fCosmicFlash_Time, "flash_time/F");
-  fCosmicFlashesTree->Branch("flash_totalPE", &fCosmicFlash_TotalPE, "flash_total_PE/i");
-  fCosmicFlashesTree->Branch("flash_z", &fCosmicFlash_Z, "flash_z/F");
-  fCosmicFlashesTree->Branch("flash_sz", &fCosmicFlash_sigmaZ, "flash_sz/F");
-  fCosmicFlashesTree->Branch("flash_y", &fCosmicFlash_Y, "flash_y/F");
-  fCosmicFlashesTree->Branch("flash_sy", &fCosmicFlash_sigmaY, "flash_sy/F");
-  fCosmicFlashesTree->Branch("flash_width", &fCosmicFlash_Width, "flash_width/F");
-  fCosmicFlashesTree->Branch("flash_abstime", &fCosmicFlash_AbsTime, "flash_abstime/F");
-  fCosmicFlashesTree->Branch("flash_num_PMT10percent", &fCosmicFlash_num10percentPMT, "flash_num_PMT10percent/i");
+  fOpCosmicFlashesTree = tfs->make<TTree>("OpCosmicFlashes", "OpCosmicFlashes Tree");
+  fOpCosmicFlashesTree->Branch("event", &fEvent, "event/i");
+  fOpCosmicFlashesTree->Branch("run", &fRun, "run/i");
+  fOpCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+  fOpCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+  fOpCosmicFlashesTree->Branch("num_flashes", &fNumOpCosmicFlashes, "num_flashes/i");
+  fOpCosmicFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
+  fOpCosmicFlashesTree->Branch("flash_totalPE", &fFlash_TotalPE, "flash_total_PE/i");
+  fOpCosmicFlashesTree->Branch("flash_z", &fFlash_Z, "flash_z/F");
+  fOpCosmicFlashesTree->Branch("flash_sz", &fFlash_sigmaZ, "flash_sz/F");
+  fOpCosmicFlashesTree->Branch("flash_y", &fFlash_Y, "flash_y/F");
+  fOpCosmicFlashesTree->Branch("flash_sy", &fFlash_sigmaY, "flash_sy/F");
+  fOpCosmicFlashesTree->Branch("flash_width", &fFlash_Width, "flash_width/F");
+  fOpCosmicFlashesTree->Branch("flash_abstime", &fFlash_AbsTime, "flash_abstime/F");
+  fOpCosmicFlashesTree->Branch("flash_num_PMT10percent", &fFlash_num10percentPMT, "flash_num_PMT10percent/i");
+
+  fSimpleCosmicFlashesTree = tfs->make<TTree>("SimpleCosmicFlashes", "SimpleCosmicFlashes Tree");
+  fSimpleCosmicFlashesTree->Branch("event", &fEvent, "event/i");
+  fSimpleCosmicFlashesTree->Branch("run", &fRun, "run/i");
+  fSimpleCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+  fSimpleCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+  fSimpleCosmicFlashesTree->Branch("num_flashes", &fNumSimpleCosmicFlashes, "num_flashes/i");
+  fSimpleCosmicFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
+  fSimpleCosmicFlashesTree->Branch("flash_totalPE", &fFlash_TotalPE, "flash_total_PE/i");
+  fSimpleCosmicFlashesTree->Branch("flash_z", &fFlash_Z, "flash_z/F");
+  fSimpleCosmicFlashesTree->Branch("flash_sz", &fFlash_sigmaZ, "flash_sz/F");
+  fSimpleCosmicFlashesTree->Branch("flash_y", &fFlash_Y, "flash_y/F");
+  fSimpleCosmicFlashesTree->Branch("flash_sy", &fFlash_sigmaY, "flash_sy/F");
+  fSimpleCosmicFlashesTree->Branch("flash_width", &fFlash_Width, "flash_width/F");
+  fSimpleCosmicFlashesTree->Branch("flash_abstime", &fFlash_AbsTime, "flash_abstime/F");
+  fSimpleCosmicFlashesTree->Branch("flash_num_PMT10percent", &fFlash_num10percentPMT, "flash_num_PMT10percent/i");
 
   //// Tree for the PF particles
   fPFParticlesTree = tfs->make<TTree>("PFParticles", "PFParticles Tree");
@@ -361,7 +389,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fPFParticlesTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
   fPFParticlesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
   fPFParticlesTree->Branch("num_mcp_saved", &fNumMcp_saved, "num_mcp_saved/i");
-  fPFParticlesTree->Branch("num_flashes", &fNumBeamFlashes, "num_flashes/i");
+  fPFParticlesTree->Branch("num_flashes", &fNumSimpleBeamFlashes, "num_flashes/i");
   fPFParticlesTree->Branch("pdg_code", &fPdgCode, "pdg_code/I");
   fPFParticlesTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
   fPFParticlesTree->Branch("is_primary", &fIsPrimary, "is_primary/O");
@@ -406,8 +434,14 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
 void Prototyping::reconfigure(fhicl::ParameterSet const &p)
 {
   m_pfp_producer = p.get<std::string>("pfp_producer", "pandoraNu");
-  m_cosmic_flash_producer = p.get<std::string>("cosmic_flash_producer", "simpleFlashCosmic");
-  m_beam_flash_producer = p.get<std::string>("cosmic_flash_producer", "simpleFlashBeam");
+  m_cosmic_simpleflash_producer = p.get<std::string>("cosmic_simpleflash_producer", "simpleFlashCosmic");
+  m_cosmic_opflash_producer = p.get<std::string>("cosmic_opflash_producer", "opflashCosmic");
+  m_cosmic_ophit_producer = p.get<std::string>("cosmic_ophit_producer", "ophitCosmic");
+  m_beam_simpleflash_producer = p.get<std::string>("beam_simpleflash_producer", "simpleFlashBeam");
+  m_beam_opflash_producer = p.get<std::string>("beam_opflash_producer", "opflashBeam");
+  m_beam_ophit_producer = p.get<std::string>("beam_ophit_producer", "ophitBeam");
+
+  m_verb = p.get<bool>("verbose_output", true);
   m_is_lite = p.get<bool>("is_lite", true);
   m_is_data = p.get<bool>("is_data", false);
 }
@@ -415,9 +449,9 @@ void Prototyping::reconfigure(fhicl::ParameterSet const &p)
 // Clear once per event
 void Prototyping::clear()
 {
-  fRun_sr = 0;
-  fSubrun_sr = 0;
-  fPot = 0;
+  //fRun_sr = 0;
+  //fSubrun_sr = 0;
+  //fPot = 0;
   fDatasetPrescaleFactor = 1;
   //fNevents = 0; we do not want to clear this, just count all events.
 
@@ -428,8 +462,10 @@ void Prototyping::clear()
   fNumPfp = 0;
   fNumMcp = 0;
   fNumMcp_saved = 0;
-  fNumBeamFlashes = 0;
-  fNumCosmicFlashes = 0;
+  fNumSimpleBeamFlashes = 0;
+  fNumOpBeamFlashes = 0;
+  fNumSimpleCosmicFlashes = 0;
+  fNumOpCosmicFlashes = 0;
 }
 
 // Clear once per cluster
@@ -512,29 +548,15 @@ void Prototyping::clear_MCParticle()
 }
 
 // Clear once per beam flash
-void Prototyping::clear_BeamFlashes()
+void Prototyping::clear_Flashes()
 {
-  fBeamFlash_Time = -9999;
-  fBeamFlash_TotalPE = 0;
-  fBeamFlash_Z = -9999;
-  fBeamFlash_sigmaZ = -9999;
-  fBeamFlash_Y = -9999;
-  fBeamFlash_sigmaY = -9999;
-  fBeamFlash_num10percentPMT = 0;
-  fBeamFlash_Width = -9999;
-  fBeamFlash_AbsTime = -9999;
-}
-
-// Clear once per cosmic flash
-void Prototyping::clear_CosmicFlashes()
-{
-  fCosmicFlash_Time = -9999;
-  fCosmicFlash_TotalPE = 0;
-  fCosmicFlash_Z = -9999;
-  fCosmicFlash_sigmaZ = -9999;
-  fCosmicFlash_Y = -9999;
-  fCosmicFlash_sigmaY = -9999;
-  fCosmicFlash_num10percentPMT = 0;
-  fCosmicFlash_Width = -9999;
-  fCosmicFlash_AbsTime = -9999;
+  fFlash_Time = -9999;
+  fFlash_TotalPE = 0;
+  fFlash_Z = -9999;
+  fFlash_sigmaZ = -9999;
+  fFlash_Y = -9999;
+  fFlash_sigmaY = -9999;
+  fFlash_num10percentPMT = 0;
+  fFlash_Width = -9999;
+  fFlash_AbsTime = -9999;
 }
