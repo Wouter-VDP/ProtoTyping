@@ -262,10 +262,12 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
   fEventTree->Branch("pot", &fPot, "pot/d");
   fEventTree->Branch("n_events", &fNevents, "n_events/i");
   fEventTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
+
   fEventTree->Branch("num_simplebeamflashes", &fNumSimpleBeamFlashes, "num_simplebeamflashes/i");
-  fEventTree->Branch("num_opcosmic_flashes", &fNumOpBeamFlashes, "num_opcosmic_flashes/i");
-  fEventTree->Branch("num_opbeamflashes", &fNumOpBeamFlashes, "num_simplebeamflashes/i");
-  fEventTree->Branch("num_simplecosmic_flashes", &fNumSimpleBeamFlashes, "num_opcosmic_flashes/i");
+  fEventTree->Branch("num_opbeamflashes", &fNumOpBeamFlashes, "num_opbeamflashes/i");
+  fEventTree->Branch("num_simplecosmicflashes", &fNumSimpleCosmicFlashes, "num_simplecosmicflashes/i");
+  fEventTree->Branch("num_opcosmicflashes", &fNumOpCosmicFlashes, "num_opcosmicflashes/i");
+
   fEventTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
   if (!m_is_data)
   {
