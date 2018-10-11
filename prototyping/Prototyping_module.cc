@@ -24,10 +24,13 @@ void Prototyping::endSubRun(const art::SubRun &sr)
 
   fPOTTree->Fill();
 
-  std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
-  for (auto elem : string_process)
+  if (m_verb)
   {
-    std::cout << elem << ", ";
+    std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
+    for (auto elem : string_process)
+    {
+      std::cout << elem << ", ";
+    }
   }
 }
 
@@ -53,10 +56,10 @@ void Prototyping::analyze(art::Event const &evt)
   auto const &cluster_handle = evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle = evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
 
-  art::ValidHandle<std::vector<recob::OpFlash> > const &simple_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_simpleflash_producer);
-  art::ValidHandle<std::vector<recob::OpFlash> > const &op_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_opflash_producer);
-  art::ValidHandle<std::vector<recob::OpFlash> > const &simple_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_simpleflash_producer);
-  art::ValidHandle<std::vector<recob::OpFlash> > const &op_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_opflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash>> const &simple_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_simpleflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash>> const &op_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_opflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash>> const &simple_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_simpleflash_producer);
+  art::ValidHandle<std::vector<recob::OpFlash>> const &op_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_opflash_producer);
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
@@ -100,6 +103,17 @@ void Prototyping::analyze(art::Event const &evt)
         fMc_EndX = mcparticle.EndX();
         fMc_EndY = mcparticle.EndY();
         fMc_EndZ = mcparticle.EndZ();
+
+        // Is this MC particle neutrino? This does seemingly not work!
+        const art::Ptr<simb::MCTruth> mctruth = TrackIDToMCTruth(evt, "largeant", mcparticle.TrackId());
+        //const art::Ptr<simb::MCTruth> mctruth = bt->TrackIDToMCTruth(mcparticle.TrackId());
+        if (mctruth->Origin() == simb::kBeamNeutrino)
+        {
+          fMc_kBeamNeutrino = true;
+          if(m_verb){
+            std::cout<<"MCParticle coming from a neutrino found! " << fMc_PdgCode << std::endl; 
+          }
+        }
 
         std::vector<float> start = {fMc_StartX, fMc_StartY, fMc_StartZ};
         std::vector<float> end = {fMc_EndX, fMc_EndY, fMc_EndZ};
@@ -195,22 +209,20 @@ void Prototyping::analyze(art::Event const &evt)
   //// Filling the flashes
   fNumSimpleBeamFlashes = simple_beam_handle->size();
   std::cout << "[ProtoTyping] fNumSimpleBeamFlashes: " << fNumSimpleBeamFlashes << std::endl;
-  fill_flash( simple_beam_handle, fNumSimpleBeamFlashes, fSimpleBeamFlashesTree );
+  fill_flash(simple_beam_handle, fNumSimpleBeamFlashes, fSimpleBeamFlashesTree);
 
   fNumOpBeamFlashes = op_beam_handle->size();
   std::cout << "[ProtoTyping] fNumOpBeamFlashes: " << fNumOpBeamFlashes << std::endl;
-  fill_flash( op_beam_handle, fNumOpBeamFlashes, fOpBeamFlashesTree );
+  fill_flash(op_beam_handle, fNumOpBeamFlashes, fOpBeamFlashesTree);
 
   fNumSimpleCosmicFlashes = simple_cosmic_handle->size();
   std::cout << "[ProtoTyping] fNumSimpleCosmicFlashes: " << fNumSimpleCosmicFlashes << std::endl;
-  fill_flash( simple_cosmic_handle, fNumSimpleCosmicFlashes, fSimpleCosmicFlashesTree );
+  fill_flash(simple_cosmic_handle, fNumSimpleCosmicFlashes, fSimpleCosmicFlashesTree);
 
   fNumOpCosmicFlashes = op_cosmic_handle->size();
   std::cout << "[ProtoTyping] fNumOpCosmicFlashes: " << fNumOpCosmicFlashes << std::endl;
-  fill_flash( op_cosmic_handle, fNumOpCosmicFlashes, fOpCosmicFlashesTree );
+  fill_flash(op_cosmic_handle, fNumOpCosmicFlashes, fOpCosmicFlashesTree);
 
-
-  
   /// PF Particle Tree
   fNumPfp = pfparticle_handle->size();
   for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
@@ -315,8 +327,7 @@ void Prototyping::analyze(art::Event const &evt)
   fEventTree->Fill();
 }
 
-
-void Prototyping::fill_flash(art::ValidHandle<std::vector<recob::OpFlash> > const &flash_handle, uint number, TTree *tree)
+void Prototyping::fill_flash(art::ValidHandle<std::vector<recob::OpFlash>> const &flash_handle, uint number, TTree *tree)
 {
   for (uint ifl = 0; ifl < number; ++ifl)
   {
@@ -334,7 +345,7 @@ void Prototyping::fill_flash(art::ValidHandle<std::vector<recob::OpFlash> > cons
 
     if (m_verb)
     {
-      std::cout << "[Prototyping::fill_flash] flash: time " <<  flash.Time() << "\twidth " << flash.TimeWidth() << "\tPE " << flash.TotalPE() << std::endl;
+      std::cout << "[Prototyping::fill_flash] flash: time " << flash.Time() << "\twidth " << flash.TimeWidth() << "\tPE " << flash.TotalPE() << std::endl;
     }
 
     for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
@@ -348,7 +359,5 @@ void Prototyping::fill_flash(art::ValidHandle<std::vector<recob::OpFlash> > cons
     tree->Fill();
   }
 }
-
-
 
 DEFINE_ART_MODULE(Prototyping)

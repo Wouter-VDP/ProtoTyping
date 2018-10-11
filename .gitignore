@@ -8,3 +8,4 @@ time.db
 *.txt
 *.csv
 .vscode
+*.out

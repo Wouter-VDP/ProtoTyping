@@ -37,12 +37,16 @@
 #include "lardataobj/RecoBase/OpFlash.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
+#include "nusimdata/SimulationBase/MCTruth.h"
 #include "larcoreobj/SummaryData/POTSummary.h"
 #include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibService.h"
 #include "uboone/Database/TPCEnergyCalib/TPCEnergyCalibProvider.h"
 #include "uboone/RawData/utils/ubdaqSoftwareTriggerData.h"
+
+//#include "larsim/MCCheater/BackTracker.h"
+#include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
 
 #include "TTree.h"
 #include "TVector3.h"
@@ -77,6 +81,9 @@ public:
 
   void fill_flash(art::ValidHandle<std::vector<recob::OpFlash>> const &simple_cosmic_handle, uint number, TTree *tree);
 
+  // Larpandora way of backtracking
+  art::Ptr<simb::MCTruth> TrackIDToMCTruth(art::Event const &e, std::string _geant_producer, int geant_track_id);
+
 private:
   // FCL parameters
   std::string m_pfp_producer;
@@ -93,6 +100,7 @@ private:
 
   // Other firvate fields
   GeometryHelper geoHelper;
+  //art::ServiceHandle<cheat::BackTracker> bt;
 
   std::set<std::string> string_process; // This variable counts the different processes invloved.
 
@@ -150,6 +158,7 @@ private:
   bool fMc_StartInside;
   bool fMc_EndInside;
   bool fMc_PartInside; // This means that the track is crossing, starts/ends inside, is completely inside.
+  bool fMc_kBeamNeutrino;  // Uses the backtracker
   float fMc_StartX;
   float fMc_StartY;
   float fMc_StartZ;
@@ -257,6 +266,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
 
   //// Tree for every event
   fEventTree = tfs->make<TTree>("Event", "Event Tree");
+  fEventTree->Branch("event", &fEvent, "event/i");
   fEventTree->Branch("run", &fRun_sr, "run/i");
   fEventTree->Branch("subrun", &fSubrun_sr, "subrun/i");
   fEventTree->Branch("pot", &fPot, "pot/d");
@@ -291,6 +301,7 @@ Prototyping::Prototyping(fhicl::ParameterSet const &p)
     fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
     fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
     fMCParticlesTree->Branch("fMc_part_inside", &fMc_PartInside, "mc_part_inside/O");
+    fMCParticlesTree->Branch("fMc_kBeamNeutrino", &fMc_kBeamNeutrino, "mcc_kBeamNeutrino/O");
     fMCParticlesTree->Branch("mc_time", &fMc_Time, "mc_time/F");
     fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
     fMCParticlesTree->Branch("mc_starty", &fMc_StartY, "mc_starty/F");
@@ -540,6 +551,7 @@ void Prototyping::clear_MCParticle()
   fMc_EndInside = false;
   fMc_StartInside = false;
   fMc_PartInside = true; // default we say there is a part inside, it gets set to false if no intersections are found.
+  fMc_kBeamNeutrino = false;
   fMc_StartX_tpc = -9999;
   fMc_StartY_tpc = -9999;
   fMc_StartZ_tpc = -9999;
@@ -561,4 +573,21 @@ void Prototyping::clear_Flashes()
   fFlash_num10percentPMT = 0;
   fFlash_Width = -9999;
   fFlash_AbsTime = -9999;
+}
+
+art::Ptr<simb::MCTruth> Prototyping::TrackIDToMCTruth(art::Event const & e, std::string _geant_producer, int geant_track_id) {
+
+    lar_pandora::MCTruthToMCParticles truthToParticles;
+    lar_pandora::MCParticlesToMCTruth particlesToTruth;
+
+    lar_pandora::LArPandoraHelper::CollectMCParticles(e, _geant_producer, truthToParticles, particlesToTruth);
+
+    for (auto iter : particlesToTruth) {
+      if (iter.first->TrackId() == geant_track_id) {
+        return iter.second;
+      }
+    }
+
+    art::Ptr<simb::MCTruth> null_ptr;
+    return null_ptr;
 }
