@@ -2,7 +2,6 @@
 #define GEOMETRYHELPER_H
 
 #include "larcore/Geometry/Geometry.h"
-#include "larcore/Geometry/TPCGeo.h"
 
 // Some geometrical function
 #define SMALL_NUM 0.00000001 // anything that avoids division overflow
@@ -16,7 +15,6 @@ class GeometryHelper
     bool isActive(const std::vector<float> &x) const;
     bool isActive(const float x[3]) const;
 
-    // some help functions.
     float dot_product_3D(const std::vector<float> &a, const std::vector<float> &b)
     {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -25,6 +23,7 @@ class GeometryHelper
     {
         return sqrt(dot_product_3D(a, a));
     }
+
     float distance(const std::vector<float> &a, const std::vector<float> &b) const;
 
     // Function to calculate closest approach
@@ -49,6 +48,7 @@ class GeometryHelper
     void clear_tracks();
 
   private:
+    art::ServiceHandle<geo::Geometry> geo;
     // Geometry helper needs to be aware of all the tracks in the event to check for broken tracks.
     std::vector<uint> tr_index;
     std::vector<float> tr_start_x;
@@ -58,6 +58,15 @@ class GeometryHelper
     std::vector<float> tr_end_y;
     std::vector<float> tr_end_z;
 };
+
+GeometryHelper::GeometryHelper()
+{
+    //// Check if things are set up properly:
+    std::cout << std::endl;
+    std::cout << "[GeometryHelper constructor] Checking set-up" << std::endl;
+    std::cout << "[GeometryHelper constructor] Detector dimensions from geo: "
+              << 2.0 * geo->DetHalfWidth() << ", " << geo->DetHalfHeight() << ", " << geo->DetLength() << std::endl;
+}
 
 bool GeometryHelper::isActive(const std::vector<float> &x) const
 {
@@ -69,20 +78,8 @@ bool GeometryHelper::isActive(const std::vector<float> &x) const
     return this->isActive(&x[0]);
 }
 
-GeometryHelper::GeometryHelper()
-{
-    //// Check if things are set up properly:
-    std::cout << std::endl;
-    std::cout << "[GeometryHelper constructor] Checking set-up" << std::endl;
-    art::ServiceHandle<geo::Geometry> geo;
-    std::cout << "[GeometryHelper constructor] Detector dimensions from geo: "
-              << 2.0 * geo->DetHalfWidth() << ", " << geo->DetHalfHeight() << ", " << geo->DetLength() << std::endl;
-}
-
 bool GeometryHelper::isActive(const float x[3]) const
 {
-
-    art::ServiceHandle<geo::Geometry> geo;
     std::vector<double> bnd = {
         0., 2.0 * geo->DetHalfWidth(),
         -1 * geo->DetHalfHeight(), geo->DetHalfHeight(),

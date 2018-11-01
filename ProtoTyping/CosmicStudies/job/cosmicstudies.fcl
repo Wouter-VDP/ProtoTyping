@@ -1,0 +1,56 @@
+#include "services_microboone.fcl"
+
+BEGIN_PROLOG
+
+cosmicstudies_analyzer:
+{ 
+    module_type:                "CosmicStudies"
+    pfp_producer:               "pandoraCosmic"
+    is_lite:                    true
+    is_data:                    false
+    is_true_nu:                 false
+}
+
+END_PROLOG
+
+
+process_name: CosmicStudies      #The process name must NOT contain any underscores
+
+source: 
+{
+  module_type: RootInput
+  maxEvents:   -1
+}
+
+services: {
+  @table::microboone_services_reco
+  @table::microboone_simulation_services
+  
+  message:                       @local::standard_info
+  TPCEnergyCalibService:         @local::microboone_tpcenergycalib_service
+  SpaceCharge:                   @local::microboone_spacecharge
+
+  scheduler:               { defaultExceptions: false }    # Make all uncaught exceptions fatal.
+  TFileService: { fileName: "CosmicStudies_tree.root" }
+}
+
+services.SpaceCharge.EnableCorrSCE:       true
+services.SpaceCharge.EnableSimEfieldSCE:  true
+services.SpaceCharge.EnableSimSpatialSCE: true
+services.DetectorPropertiesService.NumberTimeSamples:        6400
+services.DetectorPropertiesService.ReadOutWindowSize:        6400
+services.DetectorClocksService.InheritClockConfig:           false
+services.DetectorClocksService.TriggerOffsetTPC:             -0.400e3
+services.DetectorClocksService.TrigModuleName:               "daq"
+
+
+physics: {
+  
+  producers: {}
+  analyzers: { cosmicstudies: @local::cosmicstudies_analyzer }
+  filters: {}
+
+  ana: [ cosmicstudies ]
+  end_paths:    [ ana ]
+}
+
