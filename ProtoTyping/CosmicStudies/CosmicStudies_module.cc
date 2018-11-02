@@ -9,9 +9,19 @@ void CosmicStudies::analyze(art::Event const &evt)
   fNevents++;
 
   //// Filling the MC and TPCreco information -----------------------------------------------------
-  fill_TPCreco(evt);
   if (!m_is_data)
+  {
+    if (!m_simmed)
+    {
+      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant");
+    }
+    else
+    {
+      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushit");
+    }
     fill_MC(evt);
+  }
+  fill_TPCreco(evt);
   ////---------------------------------------------------------------------------------
 
   //// Filling the flashes ------------------------------------------------------------
@@ -183,7 +193,7 @@ void CosmicStudies::fill_MC(art::Event const &evt)
       if (m_is_true_nu)
       {
         // Is this MC particle neutrino?
-        const art::Ptr<simb::MCTruth> mctruth = TrackIDToMCTruth(evt, "largeant", mcparticle.TrackId());
+        const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, "largeant", mcparticle.TrackId());
         if (mctruth->Origin() == simb::kBeamNeutrino)
         {
           fMc_kBeamNeutrino = true;
@@ -306,6 +316,9 @@ void CosmicStudies::fill_MC(art::Event const &evt)
 void CosmicStudies::fill_TPCreco(art::Event const &evt)
 {
   auto const &pfparticle_handle = evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
+  std::vector<art::Ptr<recob::PFParticle>> pfp_v;
+  art::fill_ptr_vector(pfp_v, pfparticle_handle);
+
   auto const &cluster_handle = evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle = evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
 
@@ -316,12 +329,42 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
   art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
   art::FindOneP<recob::Track> track_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
 
-  lar_pandora::PFParticlesToMCParticles matchedParticles;
-  pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushit");
-  pandoraHelper.GetRecoToTrueMatches(matchedParticles);
-
-  /// PF Particle Tree
-  fNumPfp = pfparticle_handle->size();
+  if (!m_is_data)
+  {
+    lar_pandora::PFParticlesToMCParticles matchedParticles;
+    pandoraHelper.GetRecoToTrueMatches(matchedParticles);
+    if (m_verb)
+    {
+      std::cout << "[CosmicStudies::fill_TPCreco] ";
+      std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
+      std::cout << "[CosmicStudies::fill_TPCreco] ";
+      std::cout << "Number of PFPparticles in event: " << pfp_v.size() << std::endl;
+    }
+  }
+  /*
+  if (m_verb)
+  {
+    std::cout << "[CosmicStudies::fill_TPCreco] ";
+    std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
+    std::cout << "[CosmicStudies::fill_TPCreco] ";
+    std::cout << "Number of PFPparticles in event: " << pfp_v.size() << std::endl;
+    if (matchedParticles.size() > 0 && pfp_v.size() > 0)
+    {
+      art::Ptr<recob::PFParticle> firstPFP = pfp_v.at(0);
+      if (matchedParticles.find(firstPFP) == matchedParticles.end())
+      {
+        std::cout << "PFParticle is not matched" << std::endl;
+      }
+      else
+      {
+        art::Ptr<simb::MCParticle> firstMC = matchedParticles[firstPFP];
+        std::cout << "PFParticle is matched to mcparticle with pdgcode:" << firstMC->PdgCode() << std::endl;
+      }
+    }
+  }
+*/
+  /// PFParticle Tree
+  fNumPfp = pfp_v.size();
   for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
   {
     clear_PFParticle();

@@ -2,3 +2,4 @@
 
 physics.analyzers.cosmicstudies.is_data: false
 physics.analyzers.cosmicstudies.is_true_nu: true
+physics.analyzers.cosmicstudies.is_slimmed: true

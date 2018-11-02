@@ -39,6 +39,89 @@ void PandoraInterfaceHelper::get_daughter_tracks(std::vector<size_t> pf_ids,
   }
 }
 
+// Old version of configure on non-slimmed files
+void PandoraInterfaceHelper::Configure(art::Event const &e,
+                                       std::string m_pfp_producer,
+                                       std::string m_spacepoint_producer,
+                                       std::string m_hitfinder_producer,
+                                       std::string m_geant_producer)
+{
+
+  // Collect hits
+  lar_pandora::HitVector hitVector;
+  lar_pandora::LArPandoraHelper::CollectHits(e, m_hitfinder_producer, hitVector);
+
+  // Collect PFParticles and match Reco Particles to Hits
+  lar_pandora::PFParticleVector recoParticleVector;
+  lar_pandora::PFParticleVector recoNeutrinoVector;
+  lar_pandora::PFParticlesToHits pfp_to_hits_map;
+  lar_pandora::HitsToPFParticles recoHitsToParticles;
+
+  lar_pandora::LArPandoraHelper::CollectPFParticles(e, m_pfp_producer, recoParticleVector);
+  lar_pandora::LArPandoraHelper::SelectNeutrinoPFParticles(recoParticleVector, recoNeutrinoVector);
+  lar_pandora::LArPandoraHelper::BuildPFParticleHitMaps(e,
+                                                        m_pfp_producer,
+                                                        m_spacepoint_producer,
+                                                        pfp_to_hits_map,
+                                                        recoHitsToParticles,
+                                                        lar_pandora::LArPandoraHelper::kAddDaughters,
+                                                        true); // Use clusters to go from pfp to hits
+
+  if (m_verbose)
+  {
+    std::cout << "[McPfpMatch] RecoNeutrinos: " << recoNeutrinoVector.size() << std::endl;
+    std::cout << "[McPfpMatch] RecoParticles: " << recoParticleVector.size() << std::endl;
+  }
+
+  // Collect MCParticles and match True Particles to Hits
+  lar_pandora::MCParticleVector trueParticleVector;
+  lar_pandora::MCTruthToMCParticles truthToParticles;
+  lar_pandora::MCParticlesToMCTruth particlesToTruth;
+  lar_pandora::MCParticlesToHits trueParticlesToHits;
+  lar_pandora::HitsToMCParticles hit_to_mcps_map;
+
+  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, trueParticleVector);
+  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+  lar_pandora::LArPandoraHelper::BuildMCParticleHitMaps(e,
+                                                        m_geant_producer,
+                                                        hitVector,
+                                                        trueParticlesToHits,
+                                                        hit_to_mcps_map,
+                                                        lar_pandora::LArPandoraHelper::kAddDaughters); // Consider daughters as independent mcps
+
+  if (m_verbose)
+  {
+    std::cout << "[McPfpMatch] TrueParticles: " << particlesToTruth.size() << std::endl;
+    std::cout << "[McPfpMatch] TrueEvents: " << truthToParticles.size() << std::endl;
+  }
+
+  // Now set the things we need for the future
+  m_hit_to_mcps_map = hit_to_mcps_map;
+  m_pfp_to_hits_map = pfp_to_hits_map;
+
+  if (m_debug)
+  {
+    std::cout << "[McPfpMatch] This is event " << e.id().event() << std::endl;
+    //art::ServiceHandle<cheat::BackTracker> bt;
+    std::cout << "[McPfpMatch] Number of MCParticles matched to hits: " << trueParticlesToHits.size() << std::endl;
+    for (const auto &iter : trueParticlesToHits)
+    {
+      const art::Ptr<simb::MCTruth> mc_truth = TrackIDToMCTruth(e, m_geant_producer, (iter.first)->TrackId()); //bt->TrackIDToMCTruth((iter.first)->TrackId());
+      std::cout
+          << "[McPfpMatch] MCParticle with pdg " << (iter.first)->PdgCode()
+          << " and origin " << (mc_truth->Origin() == 1 ? "neutrino" : "cosmic")
+          << " has " << (iter.second).size() << " hits ass." << std::endl;
+      if (mc_truth->Origin() == 1)
+      {
+        lar_pandora::HitVector hits = (iter.second);
+      }
+    }
+  }
+
+  m_configured = true;
+}
+
+// New version of configure on slimmed files
 void PandoraInterfaceHelper::Configure(art::Event const &e,
                                        std::string m_pfp_producer,
                                        std::string m_spacepoint_producer,
@@ -168,10 +251,6 @@ void PandoraInterfaceHelper::Configure(art::Event const &e,
                     << "Error in the loop of the hits" << std::endl;
           continue;
         }
-        //const auto mct = UBXSecHelper::TrackIDToMCTruth(e, "largeant", selectedParticle->TrackId());
-        //if (mct->Origin() == simb::kBeamNeutrino && selectedParticle->PdgCode() == 13 && selectedParticle->Mother() == 0) {
-        //std::cout << "Muon from neutrino ass to hit " << hit->PeakTime() << ", "<< hit->WireID () << std::endl;
-        //}
       }
     }
   }
@@ -183,6 +262,28 @@ void PandoraInterfaceHelper::Configure(art::Event const &e,
   // std::cout << "hit_to_mcps_map size " << hit_to_mcps_map.size() << std::endl;
 
   m_configured = true;
+}
+
+art::Ptr<simb::MCTruth> PandoraInterfaceHelper::TrackIDToMCTruth(art::Event const &e, std::string m_geant_producer, int geant_track_id)
+{
+
+  lar_pandora::MCTruthToMCParticles truthToParticles;
+  lar_pandora::MCParticlesToMCTruth particlesToTruth;
+
+  if (!e.isRealData() || m_isOverlaidSample)
+  {
+    CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+
+    for (auto iter : particlesToTruth)
+    {
+      if (iter.first->TrackId() == geant_track_id)
+      {
+        return iter.second;
+      }
+    }
+  }
+  art::Ptr<simb::MCTruth> null_ptr;
+  return null_ptr;
 }
 
 void PandoraInterfaceHelper::CollectMCParticles(const art::Event &evt, const std::string &label, lar_pandora::MCParticleVector &particleVector)
@@ -396,10 +497,8 @@ std::vector<double> PandoraInterfaceHelper::calculateChargeCenter(
   auto const &spacepoint_handle =
       evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
 
-  art::FindManyP<recob::SpacePoint> spcpnts_per_pfpart(pfparticles, evt,
-                                                       m_pfp_producer);
-  art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt,
-                                              m_pfp_producer);
+  art::FindManyP<recob::SpacePoint> spcpnts_per_pfpart(pfparticles, evt, m_pfp_producer);
+  art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
 
   // Variables for the total weight and center of charge
   double totalweight = 0;

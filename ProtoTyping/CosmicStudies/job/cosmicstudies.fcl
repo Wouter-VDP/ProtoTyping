@@ -9,6 +9,8 @@ cosmicstudies_analyzer:
     is_lite:                    true
     is_data:                    false
     is_true_nu:                 false
+    is_slimmed:                 false
+    verbose_output:             true
 }
 
 END_PROLOG

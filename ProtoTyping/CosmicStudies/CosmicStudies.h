@@ -44,7 +44,6 @@
 #include "helpers/GeometryHelper.h"
 #include "helpers/PandoraInterfaceHelper.h"
 
-
 #include "TTree.h"
 #include "TVector3.h"
 #include "TLorentzVector.h"
@@ -94,6 +93,7 @@ class CosmicStudies : public art::EDAnalyzer
     bool m_is_data;
     bool m_is_true_nu;
     bool m_verb;
+    bool m_simmed;
 
     // Other private fields
     PandoraInterfaceHelper pandoraHelper;
@@ -232,7 +232,22 @@ class CosmicStudies : public art::EDAnalyzer
     float fTrack_Phi;
     float fTrack_ZenithAngle;
     float fTrack_AzimuthAngle;
-    //shower
+    // reco-truth fields
+    int fTrack_matched_PdgCode;
+    float fTrack_matchedE;
+    bool fTrack_matched_StartInside;
+    bool fTrack_matched_EndInside;
+    bool fTrack_matched_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
+    float fTrack_matched_StartX_sce; // spacecharge corrected version of the tpc edge or the inside start end point.
+    float fTrack_matched_StartY_sce;
+    float fTrack_matched_StartZ_sce;
+    float fTrack_matched_EndX_sce;
+    float fTrack_matched_EndY_sce;
+    float fTrack_matched_EndZ_sce;
+    float fTrack_matched_LengthTPC;
+    float fTrack_matched_StartMomentumX;
+    float fTrack_matched_StartMomentumY;
+    float fTrack_matched_StartMomentumZ;
 
     TTree *fClustersTree;
     float fClusterCharge, fClusterWidth, fClusterPosition;
@@ -251,7 +266,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     std::cout << std::endl;
     std::cout << "[CosmicStudies constructor] Checking set-up" << std::endl;
     //// Check if spacecharge correction is working
-    auto const& SCE (*lar::providerFrom<spacecharge::SpaceChargeService>());
+    auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
     auto scecorr = SCE.GetPosOffsets(geo::Point_t(25, 110, 250));
     double xOffset = scecorr.X();
     double yOffset = scecorr.Y();
@@ -451,6 +466,24 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fPFParticlesTree->Branch("track_phi", &fTrack_Phi, "track_phi/F");
     fPFParticlesTree->Branch("track_zenith", &fTrack_ZenithAngle, "track_zeninth/F");
     fPFParticlesTree->Branch("track_azimuth", &fTrack_AzimuthAngle, "track_azimuth/F");
+    if (!m_is_data)
+    {
+        fPFParticlesTree->Branch("track_matched_pdgcode", &fTrack_matched_PdgCode, "track_matched_pdgcode/I");
+        fPFParticlesTree->Branch("track_matched_energy", &fTrack_matchedE, "track_matched_energy/F");
+        fPFParticlesTree->Branch("track_matched_startinside", &fTrack_matched_StartInside, "track_matched_startinside/O");
+        fPFParticlesTree->Branch("track_matched_endinside", &fTrack_matched_EndInside, "track_matched_endinside/O");
+        fPFParticlesTree->Branch("track_matched_partinside", &fTrack_matched_PartInside, "track_matched_partinside/O");
+        fPFParticlesTree->Branch("track_matched_startx_sce", &fTrack_matched_StartX_sce, "track_matched_startx_sce/F");
+        fPFParticlesTree->Branch("track_matched_starty_sce", &fTrack_matched_StartY_sce, "track_matched_starty_sce/F");
+        fPFParticlesTree->Branch("track_matched_startz_sce", &fTrack_matched_StartZ_sce, "track_matched_startz_sce/F");
+        fPFParticlesTree->Branch("track_matched_endx_sce", &fTrack_matched_EndX_sce, "track_matched_endx_sce/F");
+        fPFParticlesTree->Branch("track_matched_endy_sce", &fTrack_matched_EndY_sce, "track_matched_endy_sce/F");
+        fPFParticlesTree->Branch("track_matched_endz_sce", &fTrack_matched_EndZ_sce, "track_matched_endz_sce/F");
+        fPFParticlesTree->Branch("track_matched_length_tpc", &fTrack_matched_LengthTPC, "track_matched_length_tpc/F");
+        fPFParticlesTree->Branch("track_matched_startmomentumx", &fTrack_matched_StartMomentumX, "track_matched_startmomentumx/F");
+        fPFParticlesTree->Branch("track_matched_startmomentumy", &fTrack_matched_StartMomentumY, "track_matched_startmomentumy/F");
+        fPFParticlesTree->Branch("track_matched_startmomentumz", &fTrack_matched_StartMomentumZ, "track_matched_startmomentumz/F");
+    }
 
     fClustersTree = tfs->make<TTree>("Clusters", "Clusters Tree");
     fClustersTree->Branch("event", &fEvent, "event/i");
@@ -478,6 +511,7 @@ void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
     m_is_lite = p.get<bool>("is_lite", true);
     m_is_data = p.get<bool>("is_data", false);
     m_is_true_nu = p.get<bool>("is_true_nu", false);
+    m_simmed = p.get<bool>("is_slimmed", false);
 }
 
 // Clear once per event
@@ -556,7 +590,23 @@ void CosmicStudies::clear_PFParticle()
     fTrack_Phi = -9999;
     fTrack_ZenithAngle = -9999;
     fTrack_AzimuthAngle = -9999;
-    //shower
+    // Reco-truth matched 
+    fTrack_matched_PdgCode = 0;
+    fTrack_matchedE = 0;
+    fTrack_matched_StartInside = false;
+    fTrack_matched_EndInside = false;
+    fTrack_matched_PartInside = false; 
+    fTrack_matched_StartX_sce = -9999;
+    fTrack_matched_StartY_sce = -9999;
+    fTrack_matched_StartZ_sce = -9999;
+    fTrack_matched_EndX_sce = -9999;
+    fTrack_matched_EndY_sce = -9999;
+    fTrack_matched_EndZ_sce = -9999;
+    fTrack_matched_LengthTPC = -9999;
+    fTrack_matched_StartMomentumX = -9999;
+    fTrack_matched_StartMomentumY = -9999;
+    fTrack_matched_StartMomentumZ = -9999;
+
 }
 
 // Clear once per MC particle
@@ -623,7 +673,6 @@ art::Ptr<simb::MCTruth> CosmicStudies::TrackIDToMCTruth(art::Event const &e, std
     art::Ptr<simb::MCTruth> null_ptr;
     return null_ptr;
 }
-
 
 DEFINE_ART_MODULE(CosmicStudies)
 
