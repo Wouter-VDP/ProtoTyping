@@ -1,5 +1,5 @@
 # ProtoTyping UPS product
-Collecion of LarSoft analysers to test out things. This is a stadn-alone ups-like product, that is tested and working in Uboonecode v07_07 and higher.
+Collecion of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v07_07 and higher.
 
 ## CosmicStudies
 This analyser stores PMT and TPC information and is used to run on CORSICA and BNBext files.
