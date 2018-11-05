@@ -19,6 +19,12 @@ void CosmicStudies::analyze(art::Event const &evt)
     {
       pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushit");
     }
+    // Get the map PFP->MCP and the set of MCPs
+    pandoraHelper.GetRecoToTrueMatches(matchedParticles);
+    for (auto it = matchedParticles.begin(); it != matchedParticles.end(); ++it)
+    {
+      matchedMCParticles.insert(it->second);
+    }
     fill_MC(evt);
   }
   fill_TPCreco(evt);
@@ -77,6 +83,7 @@ void CosmicStudies::endSubRun(const art::SubRun &sr)
 
   if (m_verb)
   {
+    std::set<std::string> string_process = mcpHelper.getProcesses();
     std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
     for (auto elem : string_process)
     {
@@ -149,31 +156,19 @@ void CosmicStudies::fill_MC(art::Event const &evt)
   }
 
   auto const &mcparticles_handle = evt.getValidHandle<std::vector<simb::MCParticle>>("largeant");
-  geo::TPCGeo const &thisTPC = geo_service->TPC();
-  const geo::BoxBoundedGeo &theTpcGeo(thisTPC.ActiveBoundingBox());
-  //std::cout << "This is a geometry test: " << theTpcGeo.MaxX() << ", " << theTpcGeo.MaxY() << ", " << theTpcGeo.MaxZ() << std::endl;
-  //[-1.55254.8, 117.47], 1036.9 deviates slightly from what we expect, but ok!
+  std::vector<art::Ptr<simb::MCParticle>> mcp_v;
+  art::fill_ptr_vector(mcp_v, mcparticles_handle);
 
   fNumMcp = mcparticles_handle->size();
 
   for (size_t i_mcp = 0; i_mcp < fNumMcp; i_mcp++)
   {
     simb::MCParticle const &mcparticle = mcparticles_handle->at(i_mcp);
-    string_process.insert(mcparticle.Process());
     // Important, only save MC particles with energy over 100MeV, THIS WILL SAVE ALL MUONS.
     uint pdg = abs(mcparticle.PdgCode());
     bool pdg_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 111 or pdg == 22 or pdg == 2112 or pdg == 2212;
-    if (mcparticle.E() > 0.1 && pdg_ok)
+    if (mcparticle.E() > constants::MCP_E_CUT && pdg_ok)
     {
-      clear_MCParticle();
-      if (map_process.find(mcparticle.Process()) != map_process.end())
-      {
-        fMc_Process = map_process[mcparticle.Process()];
-      }
-      else
-      {
-        std::cout << "[CosmicStudies::analyze] New MC interaction process found!" << std::endl;
-      }
       fMc_Time = mcparticle.T();
       fMc_StatusCode = mcparticle.StatusCode();
       fMc_E = mcparticle.E();
@@ -187,8 +182,6 @@ void CosmicStudies::fill_MC(art::Event const &evt)
       fMc_EndX = mcparticle.EndX();
       fMc_EndY = mcparticle.EndY();
       fMc_EndZ = mcparticle.EndZ();
-
-      TVector3 mc_start = mcparticle.Position().Vect();
 
       if (m_is_true_nu)
       {
@@ -204,109 +197,26 @@ void CosmicStudies::fill_MC(art::Event const &evt)
         }
       }
 
-      std::vector<float> start = {fMc_StartX, fMc_StartY, fMc_StartZ};
-      std::vector<float> end = {fMc_EndX, fMc_EndY, fMc_EndZ};
-      fMc_StartInside = geoHelper.isActive(start);
-      fMc_EndInside = geoHelper.isActive(end);
-      fMc_Length = geoHelper.distance(start, end); // This is the total length, not the length in the detector!
+      MCParticleInfo this_mcp = mcpHelper.fillMCP(mcparticle);
+      fMc_Process = this_mcp.process;
+      fMc_StartInside = this_mcp.startInside;
+      fMc_EndInside = this_mcp.endInside;
+      fMc_PartInside = this_mcp.partInside;
+      fMc_StartX_tpc = this_mcp.startX_tpc;
+      fMc_StartY_tpc = this_mcp.startY_tpc;
+      fMc_StartZ_tpc = this_mcp.startZ_tpc;
+      fMc_EndX_tpc = this_mcp.endX_tpc;
+      fMc_EndY_tpc = this_mcp.endY_tpc;
+      fMc_EndZ_tpc = this_mcp.endZ_tpc;
+      fMc_Length = this_mcp.length;
+      fMc_LengthTPC = this_mcp.lengthTPC;
 
-      //Find the section that is inside the tpc
-      if (!fMc_StartInside || !fMc_EndInside)
+      // is this mcp matched to a pfp? Only check if primary!
+      if (fMc_Process == 23)
       {
-        TVector3 startvec(fMc_StartX, fMc_StartY, fMc_StartZ);
-        TVector3 startdir(fMc_StartMomentumX, fMc_StartMomentumY, fMc_StartMomentumZ);
-        std::vector<TVector3> intersections = theTpcGeo.GetIntersections(startvec, startdir);
-        uint num_intersections = intersections.size();
-
-        //Particles completely passes the TPC without entering
-        if (num_intersections == 0)
-        {
-          fMc_PartInside = false;
-          fMc_LengthTPC = 0;
-        }
-
-        // Particle started inside the TPC and is exiting
-        else if (num_intersections == 1)
-        {
-          fMc_StartX_tpc = fMc_StartX;
-          fMc_StartY_tpc = fMc_StartY;
-          fMc_StartZ_tpc = fMc_StartZ;
-          fMc_EndX_tpc = intersections[0].X();
-          fMc_EndY_tpc = intersections[0].Y();
-          fMc_EndZ_tpc = intersections[0].Z();
-        }
-
-        // Particle crosses TPC or particle stops in TPC or particle stops before TPC
-        else if (num_intersections == 2)
-        {
-          double len_start_cross0 = (mc_start - intersections[0]).Mag();
-          double len_start_cross1 = (mc_start - intersections[1]).Mag();
-
-          // Particle is crossing the TPC
-          if (std::max(len_start_cross0, len_start_cross1) < fMc_Length)
-          {
-            fMc_StartX_tpc = intersections[0].X();
-            fMc_StartY_tpc = intersections[0].Y();
-            fMc_StartZ_tpc = intersections[0].Z();
-            fMc_EndX_tpc = intersections[1].X();
-            fMc_EndY_tpc = intersections[1].Y();
-            fMc_EndZ_tpc = intersections[1].Z();
-          }
-          // Particle stops before entering
-          else if (std::min(len_start_cross0, len_start_cross1) > fMc_Length)
-          {
-            fMc_PartInside = false;
-            fMc_LengthTPC = 0;
-          }
-          // Particle stops inside (assume intersections are oredered)
-          else
-          {
-            fMc_EndX_tpc = fMc_EndX;
-            fMc_EndY_tpc = fMc_EndY;
-            fMc_EndZ_tpc = fMc_EndZ;
-            if (len_start_cross0 < fMc_Length)
-            {
-              fMc_StartX_tpc = intersections[0].X();
-              fMc_StartY_tpc = intersections[0].Y();
-              fMc_StartZ_tpc = intersections[0].Z();
-            }
-            else
-            {
-              fMc_StartX_tpc = intersections[1].X();
-              fMc_StartY_tpc = intersections[1].Y();
-              fMc_StartZ_tpc = intersections[1].Z();
-            }
-          }
-        }
-      }
-      else //Start and end are inside
-      {
-        fMc_StartX_tpc = fMc_StartX;
-        fMc_StartY_tpc = fMc_StartY;
-        fMc_StartZ_tpc = fMc_StartZ;
-        fMc_EndX_tpc = fMc_EndX;
-        fMc_EndY_tpc = fMc_EndY;
-        fMc_EndZ_tpc = fMc_EndZ;
+        fMc_Matched = matchedMCParticles.find(mcp_v.at(i_mcp)) != matchedMCParticles.end();
       }
 
-      if (fMc_PartInside)
-      {
-        std::vector<float> start_tpc = {fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc};
-        std::vector<float> end_tpc = {fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc};
-        fMc_LengthTPC = geoHelper.distance(start_tpc, end_tpc);
-
-        //Correct the inside tpcpoints for spacecharge
-        auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
-        auto sce_start = SCE.GetPosOffsets(geo::Point_t(fMc_StartX_tpc, fMc_StartY_tpc, fMc_StartZ_tpc));
-        auto sce_end = SCE.GetPosOffsets(geo::Point_t(fMc_EndX_tpc, fMc_EndY_tpc, fMc_EndZ_tpc));
-
-        fMc_StartX_sce = fMc_StartX_tpc - sce_start.X() + 0.7;
-        fMc_StartY_sce = fMc_StartY_tpc + sce_start.Y();
-        fMc_StartZ_sce = fMc_StartZ_tpc + sce_start.Z();
-        fMc_EndX_sce = fMc_EndX_tpc - sce_end.X() + 0.7;
-        fMc_EndY_sce = fMc_EndY_tpc + sce_end.Y();
-        fMc_EndZ_sce = fMc_EndZ_tpc + sce_end.Z();
-      }
       fMCParticlesTree->Fill();
       fNumMcp_saved++; //Counter
     }
@@ -321,6 +231,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
 
   auto const &cluster_handle = evt.getValidHandle<std::vector<recob::Cluster>>(m_pfp_producer);
   auto const &spacepoint_handle = evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
+  auto const &MCSMu_handle = evt.getValidHandle<std::vector<recob::MCSFitResult>>("pandoraCosmicMCSMu");
 
   art::FindOneP<recob::Vertex> vertex_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
   art::FindManyP<recob::Cluster> clusters_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
@@ -329,41 +240,15 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
   art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
   art::FindOneP<recob::Track> track_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
 
-  if (!m_is_data)
-  {
-    lar_pandora::PFParticlesToMCParticles matchedParticles;
-    pandoraHelper.GetRecoToTrueMatches(matchedParticles);
-    if (m_verb)
-    {
-      std::cout << "[CosmicStudies::fill_TPCreco] ";
-      std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
-      std::cout << "[CosmicStudies::fill_TPCreco] ";
-      std::cout << "Number of PFPparticles in event: " << pfp_v.size() << std::endl;
-    }
-  }
-  /*
-  if (m_verb)
+  if (m_verb && !m_is_data)
   {
     std::cout << "[CosmicStudies::fill_TPCreco] ";
     std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
     std::cout << "[CosmicStudies::fill_TPCreco] ";
     std::cout << "Number of PFPparticles in event: " << pfp_v.size() << std::endl;
-    if (matchedParticles.size() > 0 && pfp_v.size() > 0)
-    {
-      art::Ptr<recob::PFParticle> firstPFP = pfp_v.at(0);
-      if (matchedParticles.find(firstPFP) == matchedParticles.end())
-      {
-        std::cout << "PFParticle is not matched" << std::endl;
-      }
-      else
-      {
-        art::Ptr<simb::MCParticle> firstMC = matchedParticles[firstPFP];
-        std::cout << "PFParticle is matched to mcparticle with pdgcode:" << firstMC->PdgCode() << std::endl;
-      }
-    }
   }
-*/
-  /// PFParticle Tree
+
+  /// PFParticle loop
   fNumPfp = pfp_v.size();
   for (uint i_pfp = 0; i_pfp < fNumPfp; i_pfp++)
   {
@@ -415,7 +300,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
       }
     }
 
-    // Is the Pfparticle is a TRACK
+    // The Pfparticle is a TRACK
     if (fPdgCode == 13)
     {
       art::Ptr<recob::Track> const &track_obj = track_per_pfpart.at(i_pfp);
@@ -446,6 +331,14 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
         fTrack_Phi = track_obj->Phi();
         fTrack_ZenithAngle = track_obj->ZenithAngle();
         fTrack_AzimuthAngle = track_obj->AzimuthAngle();
+
+        // MCS momentum:
+        const recob::MCSFitResult &mcsMu = MCSMu_handle->at(track_obj.key());
+        fTrack_MCS_mom = mcsMu.fwdMomentum();
+        fTrack_MCS_err = mcsMu.fwdMomUncertainty();
+        fTrack_MCS_ll = mcsMu.fwdLogLikelihood();
+        // Muon energy hypothesis
+        fTrack_MCS_energy = (std::sqrt(std::pow(fTrack_MCS_mom * 1000, 2) + std::pow(constants::MUON_M_MEV, 2)) - constants::MUON_M_MEV) / 1000.;
       }
     }
 
@@ -462,6 +355,63 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
     {
       std::cout << "No vertex found for " << fPdgCode << " with " << fNhits << std::endl;
     }
-    fPFParticlesTree->Fill();
+
+    // Fill the reco truth matched fields
+    if (!m_is_data)
+    {
+      if (matchedParticles.find(pfp_v.at(i_pfp)) != matchedParticles.end())
+      {
+        art::Ptr<simb::MCParticle> matched_mcp = matchedParticles[pfp_v.at(i_pfp)];
+
+        if (m_is_true_nu)
+        {
+          // Is this MC particle neutrino?
+          const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, "largeant", matched_mcp->TrackId());
+          if (mctruth->Origin() == simb::kBeamNeutrino)
+          {
+            fMc_kBeamNeutrino = true;
+          }
+        }
+
+        fTrack_matched_PdgCode = matched_mcp->PdgCode();
+        fTrack_matchedE = matched_mcp->E();
+        fTrack_matched_Time = matched_mcp->T();
+        fTrack_matched_StartMomentumX = matched_mcp->Px();
+        fTrack_matched_StartMomentumY = matched_mcp->Py();
+        fTrack_matched_StartMomentumZ = matched_mcp->Pz();
+
+        MCParticleInfo this_mcp = mcpHelper.fillMCP(*matched_mcp);
+        fTrack_matched_Process = this_mcp.process;
+        fTrack_matched_StartInside = this_mcp.startInside;
+        fTrack_matched_EndInside = this_mcp.endInside;
+        fTrack_matched_PartInside = this_mcp.partInside;
+        fTrack_matched_StartX_sce = this_mcp.startX_sce;
+        fTrack_matched_StartY_sce = this_mcp.startY_sce;
+        fTrack_matched_StartZ_sce = this_mcp.startZ_sce;
+        fTrack_matched_EndX_sce = this_mcp.endX_sce;
+        fTrack_matched_EndY_sce = this_mcp.endY_sce;
+        fTrack_matched_EndZ_sce = this_mcp.endZ_sce;
+        fTrack_matched_LengthTPC = this_mcp.lengthTPC;
+        fTrack_matched_Length_sce = this_mcp.length_sce;
+      }
+    }
+    // Save only PF tracks with a length over 5cm
+    if (fTrack_Valid && fTrack_Length > constants::PFP_LENGTH_CUT)
+    {
+      fPFParticlesTree->Fill();
+      fNumPfp_saved++;
+      /*
+      if (m_verb)
+      {
+        // For good tracks that are matched, verify matching and MCS
+        if (fTrack_Length > 100 && fTrack_matched_PdgCode != 0)
+        {
+          std::cout << "Track with length " << fTrack_Length << ", has MCS energy " << fTrack_MCS_mom;
+          std::cout << " ( atched PDG: " << fTrack_matched_PdgCode << ", length_sce: " << fTrack_matched_Length_sce;
+          std::cout << ", length_tpc: " << fTrack_matched_LengthTPC << ", energy: " << fTrack_matchedE << ")" << std::endl;
+        }
+      }
+      */
+    }
   }
 }

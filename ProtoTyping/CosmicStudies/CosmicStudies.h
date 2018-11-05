@@ -32,21 +32,29 @@
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/Cluster.h"
 #include "lardataobj/RecoBase/OpFlash.h"
+#include "lardataobj/RecoBase/MCSFitResult.h"
 #include "larcoreobj/SummaryData/POTSummary.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
 
 #include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
-#include "larcorealg/Geometry/TPCGeo.h"
-#include "larevt/SpaceChargeServices/SpaceChargeService.h"
 
 #include "helpers/GeometryHelper.h"
+#include "helpers/MCParticleHelper.h"
 #include "helpers/PandoraInterfaceHelper.h"
 
 #include "TTree.h"
 #include "TVector3.h"
 #include "TLorentzVector.h"
+
+namespace constants
+{
+    const float MCP_E_CUT = 0.1;
+    const float PFP_LENGTH_CUT = 5.0;
+    const float MUON_M_MEV = 105.658;
+}
+
 
 class CosmicStudies : public art::EDAnalyzer
 {
@@ -97,38 +105,9 @@ class CosmicStudies : public art::EDAnalyzer
 
     // Other private fields
     PandoraInterfaceHelper pandoraHelper;
-    GeometryHelper geoHelper;
-    art::ServiceHandle<geo::Geometry> geo_service;
-
-    std::set<std::string> string_process; // This variable counts the different processes invloved.
-    std::map<std::string, uint> map_process =
-        {
-            {"0", 0},
-            {"CoulombScat", 1},
-            {"Decay", 2},
-            {"annihil", 3},
-            {"compt", 4},
-            {"conv", 5},
-            {"dInelastic", 6},
-            {"eBrem", 7},
-            {"eIoni", 8},
-            {"hBertiniCaptureAtRest", 9},
-            {"hIoni", 10},
-            {"hadElastic", 11},
-            {"muBrems", 12},
-            {"muIoni", 13},
-            {"muMinusCaptureAtRest", 14},
-            {"muPairProd", 15},
-            {"muonNuclear", 16},
-            {"nCapture", 17},
-            {"neutronInelastic", 18},
-            {"phot", 19},
-            {"photonNuclear", 20},
-            {"pi+Inelastic", 21},
-            {"pi-Inelastic", 22},
-            {"primary", 23},
-
-        };
+    lar_pandora::PFParticlesToMCParticles matchedParticles;
+    std::set<art::Ptr<simb::MCParticle>> matchedMCParticles;
+    MCParticleHelper mcpHelper;
 
     // Fields for in the tree!
     TTree *fPOTTree;
@@ -146,6 +125,7 @@ class CosmicStudies : public art::EDAnalyzer
     uint fNumMcp;
     uint fNumMcp_saved; // criteria to keep only relevant particles.
     uint fNumPfp;
+    uint fNumPfp_saved; 
     // neutrino fields if there is a neutrino:
     uint fNum_nu;
     std::vector<float> fNu_vtx_x;
@@ -159,36 +139,32 @@ class CosmicStudies : public art::EDAnalyzer
     TTree *fMCParticlesTree;
     float fMc_E;
     int fMc_PdgCode;
-    bool fMc_StartInside;
-    bool fMc_EndInside;
-    bool fMc_PartInside;    // This means that the track is crossing, starts/ends inside, is completely inside.
-    bool fMc_kBeamNeutrino; // Uses the backtracker
     float fMc_StartX;
     float fMc_StartY;
     float fMc_StartZ;
-    float fMc_StartX_tpc; // if the track starts outside but crosses, this will be stored here.
-    float fMc_StartY_tpc;
-    float fMc_StartZ_tpc;
-    float fMc_StartX_sce; // spacecharge corrected version of the tpc edge or the inside start end point.
-    float fMc_StartY_sce;
-    float fMc_StartZ_sce;
     float fMc_EndX;
     float fMc_EndY;
     float fMc_EndZ;
-    float fMc_EndX_tpc;
-    float fMc_EndY_tpc;
-    float fMc_EndZ_tpc;
-    float fMc_EndX_sce;
-    float fMc_EndY_sce;
-    float fMc_EndZ_sce;
-    float fMc_Length;
-    float fMc_LengthTPC;
     float fMc_StartMomentumX;
     float fMc_StartMomentumY;
     float fMc_StartMomentumZ;
-    uint fMc_Process; // std::string
     int fMc_StatusCode;
     float fMc_Time;
+    bool fMc_kBeamNeutrino;
+    // using the MCPhelper
+    uint fMc_Process; // std::string
+    bool fMc_Matched; // is this mc particle matched to a PFParticle?
+    bool fMc_StartInside;
+    bool fMc_EndInside;
+    bool fMc_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
+    float fMc_StartX_tpc; // if the track starts outside but crosses, this will be stored here.
+    float fMc_StartY_tpc;
+    float fMc_StartZ_tpc;
+    float fMc_EndX_tpc;
+    float fMc_EndY_tpc;
+    float fMc_EndZ_tpc;
+    float fMc_Length;
+    float fMc_LengthTPC;
 
     TTree *fSimpleCosmicFlashesTree;
     TTree *fOpCosmicFlashesTree;
@@ -232,9 +208,17 @@ class CosmicStudies : public art::EDAnalyzer
     float fTrack_Phi;
     float fTrack_ZenithAngle;
     float fTrack_AzimuthAngle;
+    // MC fields
+    float fTrack_MCS_mom;
+    float fTrack_MCS_err;
+    float fTrack_MCS_ll;
+    float fTrack_MCS_energy;
     // reco-truth fields
     int fTrack_matched_PdgCode;
     float fTrack_matchedE;
+    bool fTrack_matched_kBeamNeutrino;
+    uint fTrack_matched_Process; // std::string
+    float fTrack_matched_Time;
     bool fTrack_matched_StartInside;
     bool fTrack_matched_EndInside;
     bool fTrack_matched_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
@@ -245,6 +229,7 @@ class CosmicStudies : public art::EDAnalyzer
     float fTrack_matched_EndY_sce;
     float fTrack_matched_EndZ_sce;
     float fTrack_matched_LengthTPC;
+    float fTrack_matched_Length_sce;
     float fTrack_matched_StartMomentumX;
     float fTrack_matched_StartMomentumY;
     float fTrack_matched_StartMomentumZ;
@@ -265,14 +250,6 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     //// Check if things are set up properly:
     std::cout << std::endl;
     std::cout << "[CosmicStudies constructor] Checking set-up" << std::endl;
-    //// Check if spacecharge correction is working
-    auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
-    auto scecorr = SCE.GetPosOffsets(geo::Point_t(25, 110, 250));
-    double xOffset = scecorr.X();
-    double yOffset = scecorr.Y();
-    double zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at test point " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
-    std::cout << std::endl;
     std::cout << "[CosmicStudies constructor] verbose_output " << m_verb << std::endl;
     std::cout << "[CosmicStudies constructor] is_lite " << m_is_lite << std::endl;
     std::cout << "[CosmicStudies constructor] is_data " << m_is_data << std::endl;
@@ -299,6 +276,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fEventTree->Branch("num_opcosmicflashes", &fNumOpCosmicFlashes, "num_opcosmicflashes/i");
 
     fEventTree->Branch("num_pfp", &fNumPfp, "num_pfp/i");
+    fEventTree->Branch("num_pfp_saved", &fNumPfp_saved, "num_pfp_saved/i");
     if (!m_is_data)
     {
         fEventTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");
@@ -329,6 +307,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fMCParticlesTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
         fMCParticlesTree->Branch("mc_status_code", &fMc_StatusCode, "mc_status_code/I");
         fMCParticlesTree->Branch("mc_process", &fMc_Process, "mc_pocess/i");
+        fMCParticlesTree->Branch("mc_is_matched", &fMc_Matched, "mc_is_matched/O");
         fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
         fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
         fMCParticlesTree->Branch("fMc_part_inside", &fMc_PartInside, "mc_part_inside/O");
@@ -340,18 +319,12 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fMCParticlesTree->Branch("mc_startx_tpc", &fMc_StartX_tpc, "mc_startx_tpc/F");
         fMCParticlesTree->Branch("mc_starty_tpc", &fMc_StartY_tpc, "mc_starty_tpc/F");
         fMCParticlesTree->Branch("mc_startz_tpc", &fMc_StartZ_tpc, "mc_startz_tpc/F");
-        fMCParticlesTree->Branch("mc_startx_sce", &fMc_StartX_sce, "mc_startx_sce/F");
-        fMCParticlesTree->Branch("mc_starty_sce", &fMc_StartY_sce, "mc_starty_sce/F");
-        fMCParticlesTree->Branch("mc_startz_sce", &fMc_StartZ_sce, "mc_startz_sce/F");
         fMCParticlesTree->Branch("mc_endx", &fMc_EndX, "mc_endx/F");
         fMCParticlesTree->Branch("mc_endy", &fMc_EndY, "mc_endy/F");
         fMCParticlesTree->Branch("mc_endz", &fMc_EndZ, "mc_endz/F");
         fMCParticlesTree->Branch("mc_endx_tpc", &fMc_EndX_tpc, "mc_endx_tpc/F");
         fMCParticlesTree->Branch("mc_endy_tpc", &fMc_EndY_tpc, "mc_endy_tpc/F");
         fMCParticlesTree->Branch("mc_endz_tpc", &fMc_EndZ_tpc, "mc_endz_tpc/F");
-        fMCParticlesTree->Branch("mc_endx_sce", &fMc_EndX_sce, "mc_endx_sce/F");
-        fMCParticlesTree->Branch("mc_endy_sce", &fMc_EndY_sce, "mc_endy_sce/F");
-        fMCParticlesTree->Branch("mc_endz_sce", &fMc_EndZ_sce, "mc_endz_sce/F");
         fMCParticlesTree->Branch("mc_startmomentumx", &fMc_StartMomentumX, "mc_startmomentumx/F");
         fMCParticlesTree->Branch("mc_startmomentumy", &fMc_StartMomentumY, "mc_startmomentumy/F");
         fMCParticlesTree->Branch("mc_startmomentumz", &fMc_StartMomentumZ, "mc_startmomentumz/F");
@@ -466,10 +439,18 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fPFParticlesTree->Branch("track_phi", &fTrack_Phi, "track_phi/F");
     fPFParticlesTree->Branch("track_zenith", &fTrack_ZenithAngle, "track_zeninth/F");
     fPFParticlesTree->Branch("track_azimuth", &fTrack_AzimuthAngle, "track_azimuth/F");
+    fPFParticlesTree->Branch("track_mcs_momentum", &fTrack_MCS_mom, "track_mcs_momentum/F");
+    fPFParticlesTree->Branch("track_mcs_mom_err", &fTrack_MCS_err, "track_mcs_mom_err/F");
+    fPFParticlesTree->Branch("track_mcs_likelihood", &fTrack_MCS_ll, "track_mcs_likelihood/F");
+    fPFParticlesTree->Branch("track_mcs_energy", &fTrack_MCS_energy, "track_mcs_energy/F");
+
     if (!m_is_data)
     {
         fPFParticlesTree->Branch("track_matched_pdgcode", &fTrack_matched_PdgCode, "track_matched_pdgcode/I");
         fPFParticlesTree->Branch("track_matched_energy", &fTrack_matchedE, "track_matched_energy/F");
+        fPFParticlesTree->Branch("track_matched_kBeamNeutrino", &fTrack_matched_kBeamNeutrino, "track_matched_kBeamNeutrino/F");
+        fPFParticlesTree->Branch("track_matched_time", &fTrack_matched_Time, "track_matched_time/F");
+        fPFParticlesTree->Branch("track_matched_process", &fTrack_matched_Process, "track_matched_process/I");
         fPFParticlesTree->Branch("track_matched_startinside", &fTrack_matched_StartInside, "track_matched_startinside/O");
         fPFParticlesTree->Branch("track_matched_endinside", &fTrack_matched_EndInside, "track_matched_endinside/O");
         fPFParticlesTree->Branch("track_matched_partinside", &fTrack_matched_PartInside, "track_matched_partinside/O");
@@ -480,6 +461,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fPFParticlesTree->Branch("track_matched_endy_sce", &fTrack_matched_EndY_sce, "track_matched_endy_sce/F");
         fPFParticlesTree->Branch("track_matched_endz_sce", &fTrack_matched_EndZ_sce, "track_matched_endz_sce/F");
         fPFParticlesTree->Branch("track_matched_length_tpc", &fTrack_matched_LengthTPC, "track_matched_length_tpc/F");
+        fPFParticlesTree->Branch("track_matched_length_sce", &fTrack_matched_Length_sce, "track_matched_length_sce/F");
         fPFParticlesTree->Branch("track_matched_startmomentumx", &fTrack_matched_StartMomentumX, "track_matched_startmomentumx/F");
         fPFParticlesTree->Branch("track_matched_startmomentumy", &fTrack_matched_StartMomentumY, "track_matched_startmomentumy/F");
         fPFParticlesTree->Branch("track_matched_startmomentumz", &fTrack_matched_StartMomentumZ, "track_matched_startmomentumz/F");
@@ -517,11 +499,10 @@ void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
 // Clear once per event
 void CosmicStudies::clear()
 {
-    //fRun_sr = 0;
-    //fSubrun_sr = 0;
-    //fPot = 0;
     fDatasetPrescaleFactor = 1;
-    //fNevents = 0; we do not want to clear this, just count all events.
+    //fNevents = 0; this is cleared every endsubrun
+    matchedParticles.clear();
+    matchedMCParticles.clear();
 
     fRun = 0;
     fSubrun = 0;
@@ -529,6 +510,7 @@ void CosmicStudies::clear()
 
     fNumPfp = 0;
     fNumMcp = 0;
+    fNumPfp_saved = 0;
     fNumMcp_saved = 0;
     fNumSimpleBeamFlashes = 0;
     fNumOpBeamFlashes = 0;
@@ -590,54 +572,8 @@ void CosmicStudies::clear_PFParticle()
     fTrack_Phi = -9999;
     fTrack_ZenithAngle = -9999;
     fTrack_AzimuthAngle = -9999;
-    // Reco-truth matched 
-    fTrack_matched_PdgCode = 0;
-    fTrack_matchedE = 0;
-    fTrack_matched_StartInside = false;
-    fTrack_matched_EndInside = false;
-    fTrack_matched_PartInside = false; 
-    fTrack_matched_StartX_sce = -9999;
-    fTrack_matched_StartY_sce = -9999;
-    fTrack_matched_StartZ_sce = -9999;
-    fTrack_matched_EndX_sce = -9999;
-    fTrack_matched_EndY_sce = -9999;
-    fTrack_matched_EndZ_sce = -9999;
-    fTrack_matched_LengthTPC = -9999;
-    fTrack_matched_StartMomentumX = -9999;
-    fTrack_matched_StartMomentumY = -9999;
-    fTrack_matched_StartMomentumZ = -9999;
-
-}
-
-// Clear once per MC particle
-void CosmicStudies::clear_MCParticle()
-{
-    fMc_EndX = -9999;
-    fMc_EndY = -9999;
-    fMc_EndZ = -9999;
-    fMc_StartX = -9999;
-    fMc_StartY = -9999;
-    fMc_StartZ = -9999;
-    fMc_Length = -9999;
-    fMc_StartMomentumX = 0;
-    fMc_StartMomentumY = 0;
-    fMc_StartMomentumZ = 0;
-    fMc_Process = 0;
-    fMc_E = 0;
-    fMc_PdgCode = 0;
-    fMc_Time = 0;
-    fMc_StatusCode = -1; // This is always 1 normally, so put it -1 if something is wrong
-    fMc_EndInside = false;
-    fMc_StartInside = false;
-    fMc_PartInside = true; // default we say there is a part inside, it gets set to false if no intersections are found.
-    fMc_kBeamNeutrino = false;
-    fMc_StartX_tpc = -9999;
-    fMc_StartY_tpc = -9999;
-    fMc_StartZ_tpc = -9999;
-    fMc_EndX_tpc = -9999;
-    fMc_EndY_tpc = -9999;
-    fMc_EndZ_tpc = -9999;
-    fMc_LengthTPC = -9999;
+    // Reco-truth matched
+    fTrack_matched_PdgCode = 0; // this means that the PFParticel was not matched!
 }
 
 // Clear once per beam flash
