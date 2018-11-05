@@ -1,4 +1,4 @@
-# prototyping
+# ProtoTyping UPS product
 Collecion of LarSoft analysers to test out things. This is a stadn-alone ups-like product, that is tested and working in Uboonecode v07_07 and higher.
 
 ## CosmicStudies
