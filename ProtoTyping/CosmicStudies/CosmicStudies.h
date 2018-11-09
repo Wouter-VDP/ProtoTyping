@@ -310,8 +310,8 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fMCParticlesTree->Branch("mc_is_matched", &fMc_Matched, "mc_is_matched/O");
         fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
         fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
-        fMCParticlesTree->Branch("fMc_part_inside", &fMc_PartInside, "mc_part_inside/O");
-        fMCParticlesTree->Branch("fMc_kBeamNeutrino", &fMc_kBeamNeutrino, "mcc_kBeamNeutrino/O");
+        fMCParticlesTree->Branch("mc_part_inside", &fMc_PartInside, "mc_part_inside/O");
+        fMCParticlesTree->Branch("mc_neutrino_origin", &fMc_kBeamNeutrino, "mc_neutrino_origin/O");
         fMCParticlesTree->Branch("mc_time", &fMc_Time, "mc_time/F");
         fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
         fMCParticlesTree->Branch("mc_starty", &fMc_StartY, "mc_starty/F");

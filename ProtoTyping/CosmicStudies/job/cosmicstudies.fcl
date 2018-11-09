@@ -15,8 +15,7 @@ cosmicstudies_analyzer:
 
 END_PROLOG
 
-
-process_name: CosmicStudies      #The process name must NOT contain any underscores
+process_name : CosmicStudies      #The process name must NOT contain any underscores
 
 source: 
 {
@@ -36,6 +35,17 @@ services: {
   TFileService: { fileName: "CosmicStudies_tree.root" }
 }
 
+outputs:
+{
+ out1:
+ {
+   module_type: RootOutput
+   fileName:    "%ifb_%tc_cosmicstudies.root"
+   dataTier:    "reconstructed"
+   compressionLevel: 1
+   }
+}
+
 services.SpaceCharge.EnableCorrSCE:       true
 services.SpaceCharge.EnableSimEfieldSCE:  true
 services.SpaceCharge.EnableSimSpatialSCE: true
@@ -53,6 +63,7 @@ physics: {
   filters: {}
 
   ana: [ cosmicstudies ]
+  stream: [ out1 ]
   end_paths:    [ ana ]
 }
 

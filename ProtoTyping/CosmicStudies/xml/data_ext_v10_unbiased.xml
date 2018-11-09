@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "data_ext_v10_pandoracosmic">
-<!ENTITY version "v06_26_01_13">
-<!ENTITY qualifier "e10:prof">
+<!ENTITY name "data_ext_v10">
+<!ENTITY version "v07_07_03">
+<!ENTITY qualifier "e17:prof">
 <!ENTITY dataset "wvdp_prod_reco2_extunbiased_v10_mcc8_v4_good">
 <!ENTITY user "wvdp">
 ]>
@@ -21,12 +21,13 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/localprod_9_30_0s0t.tar</local>
+        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/CosmicStudies/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_7_9Nov.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
-    <stage name="selection">
-        <fcl>prototyping_cosmic_data.fcl</fcl>
+    <stage name="cosmicstudies">
+        <fcl>cosmicstudies_data.fcl</fcl>
         
         <outdir>/pnfs/uboone/resilient/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>

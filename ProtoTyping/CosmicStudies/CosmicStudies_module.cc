@@ -105,7 +105,7 @@ void CosmicStudies::fill_flash(art::ValidHandle<std::vector<recob::OpFlash>> con
     recob::OpFlash const &flash = flash_handle->at(ifl);
     fFlash_TotalPE = flash.TotalPE();
     fFlash_Time = flash.Time();
-    fFlash_DiffTime = fFlash_Time - prevTime;
+    fFlash_DiffTime = fFlash_Time - prevTime; //This will not work if the flashes are sorted on PE instead of time!
     prevTime = fFlash_Time;
     fFlash_Y = flash.YCenter();
     fFlash_Z = flash.ZCenter();
