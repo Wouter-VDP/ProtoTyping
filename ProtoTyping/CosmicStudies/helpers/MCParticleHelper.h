@@ -8,10 +8,20 @@
 #include "GeometryHelper.h"
 #include "TVector3.h"
 
+namespace constants
+{
+// The corners of the bottom CRT panel
+const float BX1 = -130.;
+const float BY = -258.;
+const float BZ1 = 275.;
+const float BX2 = 400.;
+const float BZ2 = 800.;
+} // namespace constants
+
 struct MCParticleInfo
 {
     uint process; // std::string
-    //bool pfp_matched; // if the mc particle is primary, is it matched with a pfp?
+    uint end_process;
     bool startInside;
     bool endInside;
     bool partInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
@@ -32,6 +42,16 @@ struct MCParticleInfo
     float length_sce;
 };
 
+struct CRTcrossing
+{
+    bool CRT_cross;
+    float crossX;
+    float crossY;
+    float crossZ;
+    float crossE;
+    float crossT;
+};
+
 class MCParticleHelper
 {
   public:
@@ -40,6 +60,7 @@ class MCParticleHelper
 
     std::set<std::string> getProcesses() { return string_process; };
     MCParticleInfo fillMCP(simb::MCParticle const &mcparticle);
+    CRTcrossing isCrossing(simb::MCParticle const &mcparticle);
 
   private:
     geo::BoxBoundedGeo theTpcGeo;
@@ -72,7 +93,12 @@ class MCParticleHelper
             {"photonNuclear", 20},
             {"pi+Inelastic", 21},
             {"pi-Inelastic", 22},
-            {"primary", 23}};
+            {"primary", 23},
+            {"CoupledTransportation", 24},
+            {"FastScintillation", 25},
+            {"protonInelastic", 26},
+            {"anti_protonInelastic", 27},
+            {"electronNuclear", 28}};
 };
 
 MCParticleHelper::MCParticleHelper()
@@ -83,17 +109,32 @@ MCParticleHelper::MCParticleHelper()
     std::cout << std::endl;
     std::cout << "[MCParticleHelper constructor] ActivePTC volume max: " << theTpcGeo.MaxX() << ", " << theTpcGeo.MaxY() << ", " << theTpcGeo.MaxZ() << std::endl;
     std::cout << "[MCParticleHelper constructor] ActivePTC volume min: " << theTpcGeo.MinX() << ", " << theTpcGeo.MinY() << ", " << theTpcGeo.MinZ() << std::endl;
-    //// Check if spacecharge correction is working
+    //// Check if spacecharge correction is working.
     auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
-    auto scecorr = SCE.GetPosOffsets(geo::Point_t(25, 110, 250));
+    auto scecorr = SCE.GetPosOffsets(geo::Point_t(theTpcGeo.MinX(), theTpcGeo.MinY(), theTpcGeo.MinZ()));
     double xOffset = scecorr.X();
     double yOffset = scecorr.Y();
     double zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at test point " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    std::cout << "[CosmicStudies constructor] Spacecharge correction at lower TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    scecorr = SCE.GetPosOffsets(geo::Point_t(theTpcGeo.MaxX(), theTpcGeo.MaxY(), theTpcGeo.MaxZ()));
+    xOffset = scecorr.X();
+    yOffset = scecorr.Y();
+    zOffset = scecorr.Z();
+    std::cout << "[CosmicStudies constructor] Spacecharge correction at uper TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    scecorr = SCE.GetPosOffsets(geo::Point_t(0., -116.5, 0.));
+    xOffset = scecorr.X();
+    yOffset = scecorr.Y();
+    zOffset = scecorr.Z();
+    std::cout << "[CosmicStudies constructor] Spacecharge correction at (0., -116.5, 0.): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    scecorr = SCE.GetPosOffsets(geo::Point_t(256.35, 116.5, 1036.8));
+    xOffset = scecorr.X();
+    yOffset = scecorr.Y();
+    zOffset = scecorr.Z();
+    std::cout << "[CosmicStudies constructor] Spacecharge correction at (256.35., 116.5, 1036.8): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     std::cout << std::endl;
 }
 
-struct MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
+MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
 {
     MCParticleInfo this_mcp;
 
@@ -105,7 +146,18 @@ struct MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcpartic
     else
     {
         this_mcp.process = 999;
-        std::cout << "[CosmicStudies::analyze] New MC interaction process found!" << std::endl;
+        std::cout << "[CosmicStudies::analyze] New MC interaction process found: " << mcparticle.Process() << std::endl;
+    }
+
+    string_process.insert(mcparticle.EndProcess());
+    if (map_process.find(mcparticle.EndProcess()) != map_process.end())
+    {
+        this_mcp.end_process = map_process[mcparticle.EndProcess()];
+    }
+    else
+    {
+        this_mcp.end_process = 999;
+        std::cout << "[CosmicStudies::analyze] New MC interaction end_process found!" << std::endl;
     }
 
     TVector3 mc_start = mcparticle.Position().Vect();
@@ -117,7 +169,7 @@ struct MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcpartic
     this_mcp.endInside = geoHelper.isActive(end);
     this_mcp.length = geoHelper.distance(start, end); // This is the total length, not the length in the detector!
 
-    this_mcp.partInside=true;
+    this_mcp.partInside = true;
     //Find the section that is inside the tpc
     if (!this_mcp.startInside || !this_mcp.endInside)
     {
@@ -221,6 +273,40 @@ struct MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcpartic
         this_mcp.length_sce = geoHelper.distance(start_sce, end_sce);
     }
     return this_mcp;
+}
+
+CRTcrossing MCParticleHelper::isCrossing(simb::MCParticle const &mcparticle)
+{
+    CRTcrossing this_cross;
+    this_cross.CRT_cross = false;
+
+    const simb::MCTrajectory &traj = mcparticle.Trajectory();
+    TVector3 pt1;
+    TVector3 pt2;
+
+    for (size_t t = 1; t < traj.size(); t++)
+    {
+        pt1 = traj.Position(t - 1).Vect();
+        pt2 = traj.Position(t).Vect();
+
+        // check if the point intersects the bottom panel
+        t = (constants::BY - pt1.Y()) / (pt2.Y() - pt1.Y());
+        // if t < 0 or > 1 then the intersection is beyond the segment
+        if ((t > 0) && (t <= 1))
+        {
+            this_cross.crossX = pt1.X() + (pt2.X() - pt1.X()) * t;
+            this_cross.crossZ = pt1.Z() + (pt2.Z() - pt1.Z()) * t;
+            if ((this_cross.crossX > constants::BX1) && (this_cross.crossX < constants::BX2) && (this_cross.crossZ > constants::BZ1) && (this_cross.crossZ < constants::BZ2))
+            {
+                this_cross.crossY = pt1.Y() + (pt2.Y() - pt1.Y()) * t;
+                this_cross.crossE = traj.E(t - 1);
+                this_cross.crossT = traj.T(t - 1);
+                this_cross.CRT_cross = true;
+                return this_cross;
+            } // if they intersec
+        }     // if t is between 0 and 1
+    }
+    return this_cross;
 }
 
 #endif

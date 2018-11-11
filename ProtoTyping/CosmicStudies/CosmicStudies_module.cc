@@ -84,7 +84,7 @@ void CosmicStudies::endSubRun(const art::SubRun &sr)
   if (m_verb)
   {
     std::set<std::string> string_process = mcpHelper.getProcesses();
-    std::cout << "string_process has mamebers: " << string_process.size() << std::endl;
+    std::cout << "string_process has members: " << string_process.size() << std::endl;
     for (auto elem : string_process)
     {
       std::cout << elem << ", ";
@@ -199,6 +199,7 @@ void CosmicStudies::fill_MC(art::Event const &evt)
 
       MCParticleInfo this_mcp = mcpHelper.fillMCP(mcparticle);
       fMc_Process = this_mcp.process;
+      fMc_EndProcess = this_mcp.end_process;
       fMc_StartInside = this_mcp.startInside;
       fMc_EndInside = this_mcp.endInside;
       fMc_PartInside = this_mcp.partInside;
@@ -215,6 +216,24 @@ void CosmicStudies::fill_MC(art::Event const &evt)
       if (fMc_Process == 23)
       {
         fMc_Matched = matchedMCParticles.find(mcp_v.at(i_mcp)) != matchedMCParticles.end();
+      }
+
+      // Check if we have a CRT crossing:
+      // Require a charged particle, 50MeV energy and an end point below the CRT in y:
+      bool pdg_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 111 or pdg == 2212;
+      if (pdg_ok && fMc_E<0.05 && fMc_EndY < constants::BY)
+      {
+        CRTcrossing this_crossing = mcpHelper.isCrossing(mcparticle);
+        fCRT_crossed = this_crossing.CRT_cross;
+        if(fCRT_crossed)
+        {
+          fCrossE = this_crossing.crossE;
+          fCrossT = this_crossing.crossT;
+          fCrossX = this_crossing.crossX;
+          fCrossY = this_crossing.crossY;
+          fCrossZ = this_crossing.crossZ;
+          fCRTcrossTree->Fill();
+        }
       }
 
       fMCParticlesTree->Fill();
@@ -382,6 +401,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
 
         MCParticleInfo this_mcp = mcpHelper.fillMCP(*matched_mcp);
         fTrack_matched_Process = this_mcp.process;
+        fTrack_matched_EndProcess = this_mcp.end_process;
         fTrack_matched_StartInside = this_mcp.startInside;
         fTrack_matched_EndInside = this_mcp.endInside;
         fTrack_matched_PartInside = this_mcp.partInside;

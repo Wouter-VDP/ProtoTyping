@@ -50,11 +50,10 @@
 
 namespace constants
 {
-    const float MCP_E_CUT = 0.1;
-    const float PFP_LENGTH_CUT = 5.0;
-    const float MUON_M_MEV = 105.658;
-}
-
+const float MCP_E_CUT = 0.1;
+const float PFP_LENGTH_CUT = 5.0;
+const float MUON_M_MEV = 105.658;
+} // namespace constants
 
 class CosmicStudies : public art::EDAnalyzer
 {
@@ -125,7 +124,7 @@ class CosmicStudies : public art::EDAnalyzer
     uint fNumMcp;
     uint fNumMcp_saved; // criteria to keep only relevant particles.
     uint fNumPfp;
-    uint fNumPfp_saved; 
+    uint fNumPfp_saved;
     // neutrino fields if there is a neutrino:
     uint fNum_nu;
     std::vector<float> fNu_vtx_x;
@@ -153,10 +152,12 @@ class CosmicStudies : public art::EDAnalyzer
     bool fMc_kBeamNeutrino;
     // using the MCPhelper
     uint fMc_Process; // std::string
+    uint fMc_EndProcess;
     bool fMc_Matched; // is this mc particle matched to a PFParticle?
     bool fMc_StartInside;
     bool fMc_EndInside;
-    bool fMc_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
+    bool fMc_PartInside; // This means that the track is crossing, starts/ends inside, is completely inside.
+    bool fCRT_crossed;
     float fMc_StartX_tpc; // if the track starts outside but crosses, this will be stored here.
     float fMc_StartY_tpc;
     float fMc_StartZ_tpc;
@@ -217,7 +218,8 @@ class CosmicStudies : public art::EDAnalyzer
     int fTrack_matched_PdgCode;
     float fTrack_matchedE;
     bool fTrack_matched_kBeamNeutrino;
-    uint fTrack_matched_Process; // std::string
+    uint fTrack_matched_Process;    // std::string
+    uint fTrack_matched_EndProcess; // std::string
     float fTrack_matched_Time;
     bool fTrack_matched_StartInside;
     bool fTrack_matched_EndInside;
@@ -237,6 +239,13 @@ class CosmicStudies : public art::EDAnalyzer
     TTree *fClustersTree;
     float fClusterCharge, fClusterWidth, fClusterPosition;
     uint fClusterNhits, fClusterPlane;
+
+    TTree *fCRTcrossTree;
+    float fCrossX;
+    float fCrossY;
+    float fCrossZ;
+    float fCrossE;
+    float fCrossT;
 };
 
 CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
@@ -306,11 +315,13 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fMCParticlesTree->Branch("mc_energy", &fMc_E, "mc_energy/F");
         fMCParticlesTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
         fMCParticlesTree->Branch("mc_status_code", &fMc_StatusCode, "mc_status_code/I");
-        fMCParticlesTree->Branch("mc_process", &fMc_Process, "mc_pocess/i");
+        fMCParticlesTree->Branch("mc_process", &fMc_Process, "mc_process/i");
+        fMCParticlesTree->Branch("mc_end_process", &fMc_EndProcess, "mc_end_process/i");
         fMCParticlesTree->Branch("mc_is_matched", &fMc_Matched, "mc_is_matched/O");
         fMCParticlesTree->Branch("mc_start_inside", &fMc_StartInside, "mc_start_inside/O");
         fMCParticlesTree->Branch("mc_end_inside", &fMc_EndInside, "mc_end_inside/O");
         fMCParticlesTree->Branch("mc_part_inside", &fMc_PartInside, "mc_part_inside/O");
+        fMCParticlesTree->Branch("crt_crossed", &fCRT_crossed, "crt_crossed/O");
         fMCParticlesTree->Branch("mc_neutrino_origin", &fMc_kBeamNeutrino, "mc_neutrino_origin/O");
         fMCParticlesTree->Branch("mc_time", &fMc_Time, "mc_time/F");
         fMCParticlesTree->Branch("mc_startx", &fMc_StartX, "mc_startx/F");
@@ -450,7 +461,8 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fPFParticlesTree->Branch("track_matched_energy", &fTrack_matchedE, "track_matched_energy/F");
         fPFParticlesTree->Branch("track_matched_kBeamNeutrino", &fTrack_matched_kBeamNeutrino, "track_matched_kBeamNeutrino/F");
         fPFParticlesTree->Branch("track_matched_time", &fTrack_matched_Time, "track_matched_time/F");
-        fPFParticlesTree->Branch("track_matched_process", &fTrack_matched_Process, "track_matched_process/I");
+        fPFParticlesTree->Branch("track_matched_process", &fTrack_matched_Process, "track_matched_process/i");
+        fPFParticlesTree->Branch("track_matched_end_process", &fTrack_matched_EndProcess, "track_matched_end_process/i");
         fPFParticlesTree->Branch("track_matched_startinside", &fTrack_matched_StartInside, "track_matched_startinside/O");
         fPFParticlesTree->Branch("track_matched_endinside", &fTrack_matched_EndInside, "track_matched_endinside/O");
         fPFParticlesTree->Branch("track_matched_partinside", &fTrack_matched_PartInside, "track_matched_partinside/O");
@@ -477,6 +489,19 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fClustersTree->Branch("n_hits", &fClusterNhits, "n_hits/i");
     fClustersTree->Branch("plane", &fClusterPlane, "plane/i");
     fClustersTree->Branch("position", &fClusterPosition, "position/F");
+
+    if (!m_is_data)
+    {
+        fCRTcrossTree = tfs->make<TTree>("CRTcross", "CRTcross Tree");
+        fCRTcrossTree->Branch("cross_x", &fCrossX, "cross_x/F");
+        fCRTcrossTree->Branch("cross_y", &fCrossY, "cross_y/F");
+        fCRTcrossTree->Branch("cross_z", &fCrossZ, "cross_z/F");
+        fCRTcrossTree->Branch("cross_time", &fCrossT, "cross_time/F");
+        fCRTcrossTree->Branch("cross_E", &fCrossE, "cross_/F");
+        fCRTcrossTree->Branch("mc_time", &fMc_Time, "cross_x/F");
+        fCRTcrossTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/F");
+        fCRTcrossTree->Branch("mc_process", &fMc_Process, "mc_process/i");
+    }
 }
 
 void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
