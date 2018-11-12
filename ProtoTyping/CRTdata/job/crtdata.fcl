@@ -1,0 +1,54 @@
+#include "services_microboone.fcl"
+
+BEGIN_PROLOG
+
+crtdata_analyzer:
+{ 
+    module_type:                "CRTdata"
+}
+
+END_PROLOG
+
+process_name : CRTdata
+
+source: 
+{
+  module_type: RootInput
+  maxEvents:   -1
+}
+
+services: {
+  @table::microboone_services_reco
+  @table::microboone_simulation_services
+  
+  message:       @local::standard_info
+  scheduler:     { defaultExceptions: false }    # Make all uncaught exceptions fatal.
+  TFileService:  { fileName: "CRTdata_tree.root" }
+}
+
+outputs:
+{
+ out1:
+ {
+   module_type: RootOutput
+   fileName:    "%ifb_%tc_crtdata.root"
+   dataTier:    "reconstructed"
+   compressionLevel: 1
+   }
+}
+
+services.DetectorProperties.NumberTimeSamples:                             6400
+services.DetectorProperties.ReadOutWindowSize:                             6400
+services.DetectorClocksService.InheritClockConfig:                         false
+services.DetectorClocksService.TriggerOffsetTPC:                          -0.400e3
+
+physics: {
+  
+  producers: {}
+  analyzers: { crtdata: @local::crtdata_analyzer }
+  filters: {}
+
+  ana:       [ crtdata ]
+  stream:    [ out1 ]
+  end_paths: [ ana ]
+}

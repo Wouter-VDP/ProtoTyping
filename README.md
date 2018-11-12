@@ -8,5 +8,9 @@ Momentum of tracks is stored using MCS.
 Flashes are stored for all combnations of op/simple reconstruction and cosmic/beam discriminators.
 Truth level information is stored of all MC particles above 100MeV, crossing or not crossing the TPC.
 
+##CRTdata
+
+Smal module to store the CRThit info in data.
+
 For further questions:
 woutervdp@g.harvard.edu
