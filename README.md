@@ -10,7 +10,7 @@ Truth level information is stored of all MC particles above 100MeV, crossing or 
 
 ## CRTdata
 
-Smal module to store the CRThit info in data.
+Module to store the CRThit info in data.
 
 For further questions:
 woutervdp@g.harvard.edu
