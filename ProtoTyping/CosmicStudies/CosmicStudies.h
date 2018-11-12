@@ -50,9 +50,10 @@
 
 namespace constants
 {
-const float MCP_E_CUT = 0.1;
-const float PFP_LENGTH_CUT = 5.0;
-const float MUON_M_MEV = 105.658;
+const float MCP_E_CUT = 0.1;         // Only save MC particles above this energy
+const float PFP_LENGTH_CUT = 5.0;    // Only save reconstructed tracks above this length
+const float MUON_M_MEV = 105.658;    // Mass of muons, in MeV
+const float CRT_E_CUT = 0.05;        // Minimum particle energy
 } // namespace constants
 
 class CosmicStudies : public art::EDAnalyzer
@@ -493,13 +494,16 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     if (!m_is_data)
     {
         fCRTcrossTree = tfs->make<TTree>("CRTcross", "CRTcross Tree");
+        fCRTcrossTree->Branch("event", &fEvent, "event/i");
+        fCRTcrossTree->Branch("run", &fRun, "run/i");
+        fCRTcrossTree->Branch("subrun", &fSubrun, "subrun/i");
         fCRTcrossTree->Branch("cross_x", &fCrossX, "cross_x/F");
         fCRTcrossTree->Branch("cross_y", &fCrossY, "cross_y/F");
         fCRTcrossTree->Branch("cross_z", &fCrossZ, "cross_z/F");
         fCRTcrossTree->Branch("cross_time", &fCrossT, "cross_time/F");
         fCRTcrossTree->Branch("cross_E", &fCrossE, "cross_/F");
         fCRTcrossTree->Branch("mc_time", &fMc_Time, "cross_x/F");
-        fCRTcrossTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/F");
+        fCRTcrossTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
         fCRTcrossTree->Branch("mc_process", &fMc_Process, "mc_process/i");
     }
 }

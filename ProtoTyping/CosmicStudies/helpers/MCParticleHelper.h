@@ -115,22 +115,22 @@ MCParticleHelper::MCParticleHelper()
     double xOffset = scecorr.X();
     double yOffset = scecorr.Y();
     double zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at lower TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    std::cout << "[MCParticleHelper constructor] Spacecharge correction at lower TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     scecorr = SCE.GetPosOffsets(geo::Point_t(theTpcGeo.MaxX(), theTpcGeo.MaxY(), theTpcGeo.MaxZ()));
     xOffset = scecorr.X();
     yOffset = scecorr.Y();
     zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at uper TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    std::cout << "[MCParticleHelper constructor] Spacecharge correction at uper TPC corner: " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     scecorr = SCE.GetPosOffsets(geo::Point_t(0., -116.5, 0.));
     xOffset = scecorr.X();
     yOffset = scecorr.Y();
     zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at (0., -116.5, 0.): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    std::cout << "[MCParticleHelper constructor] Spacecharge correction at (0., -116.5, 0.): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     scecorr = SCE.GetPosOffsets(geo::Point_t(256.35, 116.5, 1036.8));
     xOffset = scecorr.X();
     yOffset = scecorr.Y();
     zOffset = scecorr.Z();
-    std::cout << "[CosmicStudies constructor] Spacecharge correction at (256.35., 116.5, 1036.8): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
+    std::cout << "[MCParticleHelper constructor] Spacecharge correction at (256.35., 116.5, 1036.8): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     std::cout << std::endl;
 }
 
@@ -283,13 +283,13 @@ CRTcrossing MCParticleHelper::isCrossing(simb::MCParticle const &mcparticle)
     const simb::MCTrajectory &traj = mcparticle.Trajectory();
     TVector3 pt1;
     TVector3 pt2;
+    float t;
 
-    for (size_t t = 1; t < traj.size(); t++)
+    for (size_t i = 1; i < traj.size(); i++)
     {
-        pt1 = traj.Position(t - 1).Vect();
-        pt2 = traj.Position(t).Vect();
+        pt1 = traj.Position(i - 1).Vect();
+        pt2 = traj.Position(i).Vect();
 
-        // check if the point intersects the bottom panel
         t = (constants::BY - pt1.Y()) / (pt2.Y() - pt1.Y());
         // if t < 0 or > 1 then the intersection is beyond the segment
         if ((t > 0) && (t <= 1))

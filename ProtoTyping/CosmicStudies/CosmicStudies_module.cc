@@ -219,13 +219,13 @@ void CosmicStudies::fill_MC(art::Event const &evt)
       }
 
       // Check if we have a CRT crossing:
-      // Require a charged particle, 50MeV energy and an end point below the CRT in y:
-      bool pdg_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 111 or pdg == 2212;
-      if (pdg_ok && fMc_E<0.05 && fMc_EndY < constants::BY)
+      // Require a charged particle, a minimum energy and an end point below the CRT in y:
+      bool pdg_crt_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212;
+      if (pdg_crt_ok && fMc_E > constants::CRT_E_CUT && fMc_EndY < constants::BY)
       {
         CRTcrossing this_crossing = mcpHelper.isCrossing(mcparticle);
         fCRT_crossed = this_crossing.CRT_cross;
-        if(fCRT_crossed)
+        if (fCRT_crossed)
         {
           fCrossE = this_crossing.crossE;
           fCrossT = this_crossing.crossT;
