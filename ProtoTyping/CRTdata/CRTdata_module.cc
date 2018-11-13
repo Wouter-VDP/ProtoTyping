@@ -39,8 +39,8 @@ public:
   void analyze(art::Event const &e) override;
 
 private:
-  const std::string m_CRTHitProducer = "CRTHitProducer";
-  const std::string m_DAQHeaderProducer = "DAQHeaderProducer";
+  const std::string m_CRTHitProducer = "merger";
+  const std::string m_DAQHeaderProducer = "daq";
   const float m_DTOffset = 68600.; // in microseconds
 
   // TTree Declaration.
@@ -60,13 +60,8 @@ private:
   float fY_err;
   float fZ;
   float fZ_err;
-
-  uint32_t ts0_s;
-  int8_t ts0_s_corr;
-
-  uint32_t ts0_ns;
-  int32_t ts0_ns_corr;
-  int32_t ts1_ns;
+  double fT0_ns;
+  double fT1_ns;
 };
 
 CRTdata::CRTdata(fhicl::ParameterSet const &p)
@@ -92,6 +87,9 @@ CRTdata::CRTdata(fhicl::ParameterSet const &p)
   fCRTTree->Branch("y_err", &fY_err, "y_err/F");
   fCRTTree->Branch("z", &fZ, "z/F");
   fCRTTree->Branch("z_err", &fZ_err, "z_err/F");
+
+  fCRTTree->Branch("t0_ns", &fT0_ns, "time/D");
+  fCRTTree->Branch("t1_ns", &fT1_ns, "time/D");
 }
 
 void CRTdata::analyze(art::Event const &e)
@@ -133,24 +131,10 @@ void CRTdata::analyze(art::Event const &e)
     fY_err = crthit_h->at(j).y_err;
     fZ_err = crthit_h->at(j).z_err;
 
+    fT0_ns = crthit_h->at(j).ts0_ns;
+    fT1_ns = crthit_h->at(j).ts1_ns;
     // Time of the CRT Hit wrt the event timestamp
-    fTime = ((crthit_h->at(j).ts0_ns - evt_timeGPS_nsec + m_DTOffset) / 1000.);
-
-    uint32_t ts0_s;
-    int8_t ts0_s_corr;
-
-    uint32_t ts0_ns;
-    int32_t ts0_ns_corr;
-    int32_t ts1_ns;
-
-    ts0_s = crthit_h->at(j).ts0_ns;
-    ts0_s_corr = crthit_h->at(j).ts0_s_corr;
-    ts0_ns = crthit_h->at(j).ts0_ns;
-    ts1_ns = crthit_h->at(j).ts1_ns;
-    ts0_ns_corr = crthit_h->at(j).ts0_ns_corr;
-
-    std::cout << "fTime: " << fTime << "\t ts0_s: " << ts0_s << "\t ts0_ns: " << ts0_ns << "\t ts1_ns: " << ts1_ns;
-    std::cout << "\t ts0_s_corr: " << ts0_s_corr << "\t ts0_ns_corr: " << ts0_ns_corr << std::endl;
+    fTime = ((fT0_ns - evt_timeGPS_nsec + m_DTOffset) / 1000.);
 
     fCRTTree->Fill();
   }

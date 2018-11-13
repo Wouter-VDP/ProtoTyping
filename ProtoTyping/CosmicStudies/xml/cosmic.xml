@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
 <!ENTITY name "opencosmic83">
-<!ENTITY version "v07_07_03">
+<!ENTITY version "v07_10_00">
 <!ENTITY qualifier "e17:prof">
 <!ENTITY dataset "wvdp_prodcosmics_corsika_cmc_uboone_mcc8.3_reco2_dev">
 <!ENTITY user "wvdp">
@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/CosmicStudies/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_7_9Nov.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_7_12Nov.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -37,7 +37,7 @@
         <inputdef>&dataset;</inputdef>
         <numjobs>250</numjobs>
         <disk>20GB</disk>
-        <memory>1999</memory>
+        <memory>2500</memory>
         <maxfilesperjob>10</maxfilesperjob>
         <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 

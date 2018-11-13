@@ -20,8 +20,11 @@ source:
 services: {
   @table::microboone_services_reco
   @table::microboone_simulation_services
+  DetectorProperties:             @local::microboone_detproperties
+  LArProperties:                  @local::microboone_properties
+  DetectorClocksService:          @local::microboone_detectorclocks
+  message:                        @local::standard_info
   
-  message:       @local::standard_info
   scheduler:     { defaultExceptions: false }    # Make all uncaught exceptions fatal.
   TFileService:  { fileName: "CRTdata_tree.root" }
 }
