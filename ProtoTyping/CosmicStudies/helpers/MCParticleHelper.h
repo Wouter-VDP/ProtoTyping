@@ -2,8 +2,12 @@
 #define MCPARTICLEHELPER_H
 
 #include "larcorealg/Geometry/TPCGeo.h"
-#include "larevt/SpaceChargeServices/SpaceChargeService.h"
 #include "larcore/Geometry/Geometry.h"
+
+#include "art/Framework/Services/Registry/ServiceHandle.h"
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
+#include "lardata/DetectorInfoServices/DetectorClocksServiceStandard.h"
 
 #include "GeometryHelper.h"
 #include "TVector3.h"
@@ -58,6 +62,8 @@ class MCParticleHelper
     MCParticleHelper();
     ~MCParticleHelper() = default;
 
+    void Configure(bool is_mcc9);
+
     std::set<std::string> getProcesses() { return string_process; };
     MCParticleInfo fillMCP(simb::MCParticle const &mcparticle);
     CRTcrossing isCrossing(simb::MCParticle const &mcparticle);
@@ -66,6 +72,7 @@ class MCParticleHelper
     geo::BoxBoundedGeo theTpcGeo;
     art::ServiceHandle<geo::Geometry> geo_service;
     GeometryHelper geoHelper;
+    bool m_is_mcc9;
 
     std::set<std::string> string_process; // This variable counts the different processes invloved.
     std::map<std::string, uint> map_process =
@@ -132,6 +139,12 @@ MCParticleHelper::MCParticleHelper()
     zOffset = scecorr.Z();
     std::cout << "[MCParticleHelper constructor] Spacecharge correction at (256.35., 116.5, 1036.8): " << xOffset << ", " << yOffset << ", " << zOffset << std::endl;
     std::cout << std::endl;
+}
+
+void MCParticleHelper::Configure(bool is_mcc9)
+{
+    m_is_mcc9 = is_mcc9;
+    std::cout << "[MCParticleHelper configuration] File is mcc9? " << m_is_mcc9 << std::endl;
 }
 
 MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
@@ -257,16 +270,30 @@ MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
         this_mcp.lengthTPC = geoHelper.distance(start_tpc, end_tpc);
 
         //Correct the inside tpcpoints for spacecharge
+
         auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
         auto sce_start = SCE.GetPosOffsets(geo::Point_t(this_mcp.startX_tpc, this_mcp.startY_tpc, this_mcp.startZ_tpc));
         auto sce_end = SCE.GetPosOffsets(geo::Point_t(this_mcp.endX_tpc, this_mcp.endY_tpc, this_mcp.endZ_tpc));
 
-        this_mcp.startX_sce = this_mcp.startX_tpc - sce_start.X() + 0.7;
         this_mcp.startY_sce = this_mcp.startY_tpc + sce_start.Y();
         this_mcp.startZ_sce = this_mcp.startZ_tpc + sce_start.Z();
-        this_mcp.endX_sce = this_mcp.endX_tpc - sce_end.X() + 0.7;
         this_mcp.endY_sce = this_mcp.endY_tpc + sce_end.Y();
         this_mcp.endZ_sce = this_mcp.endZ_tpc + sce_end.Z();
+
+        if (m_is_mcc9)
+        {
+            auto const &detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>();
+            auto const &detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
+            float g4Ticks = detClocks->TPCG4Time2Tick(mcparticle.T()) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
+            float xtimeoffset = detProperties->ConvertTicksToX(g4Ticks, 0, 0, 0);
+            this_mcp.startX_sce = (this_mcp.startX_tpc + xtimeoffset + sce_start.X()) * (1.114 / 1.098) + 0.6;
+            this_mcp.endX_sce = (this_mcp.endX_tpc + xtimeoffset + sce_end.X()) * (1.114 / 1.098) + 0.6;
+        }
+        else
+        {
+            this_mcp.startX_sce = this_mcp.startX_tpc - sce_start.X() + 0.7;
+            this_mcp.endX_sce = this_mcp.endX_tpc - sce_end.X() + 0.7;
+        }
 
         std::vector<float> start_sce = {this_mcp.startX_sce, this_mcp.startY_sce, this_mcp.startZ_tpc};
         std::vector<float> end_sce = {this_mcp.endX_sce, this_mcp.endY_sce, this_mcp.endZ_sce};

@@ -11,16 +11,19 @@ void CosmicStudies::analyze(art::Event const &evt)
   //// Filling the MC and TPCreco information -----------------------------------------------------
   if (!m_is_data)
   {
-    if (!m_simmed)
+    if (!m_slimmed)
     {
       pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant");
+      std::cout << "[CosmicStudies] Reco-Truth matcher configured (full file)." << std::endl;
     }
     else
     {
-      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushit");
+      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushitTruthMatch");
+      std::cout << "[CosmicStudies] Reco-Truth matcher configured (slimmed file)." << std::endl;
     }
     // Get the map PFP->MCP and the set of MCPs
     pandoraHelper.GetRecoToTrueMatches(matchedParticles);
+    std::cout << "[CosmicStudies] Reco-Truth matches constructed." << std::endl;
     for (auto it = matchedParticles.begin(); it != matchedParticles.end(); ++it)
     {
       matchedMCParticles.insert(it->second);
@@ -194,6 +197,10 @@ void CosmicStudies::fill_MC(art::Event const &evt)
           {
             std::cout << "MCParticle coming from a neutrino found! " << fMc_PdgCode << std::endl;
           }
+        }
+        else
+        {
+          fMc_kBeamNeutrino = false;
         }
       }
 
@@ -388,7 +395,11 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
           const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, "largeant", matched_mcp->TrackId());
           if (mctruth->Origin() == simb::kBeamNeutrino)
           {
-            fMc_kBeamNeutrino = true;
+            fTrack_matched_kBeamNeutrino = true;
+          }
+          else
+          {
+            fTrack_matched_kBeamNeutrino = false;
           }
         }
 
@@ -407,6 +418,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
         fTrack_matched_PartInside = this_mcp.partInside;
         fTrack_matched_StartX_sce = this_mcp.startX_sce;
         fTrack_matched_StartY_sce = this_mcp.startY_sce;
+        fTrack_matched_StartY = this_mcp.startY_tpc;
         fTrack_matched_StartZ_sce = this_mcp.startZ_sce;
         fTrack_matched_EndX_sce = this_mcp.endX_sce;
         fTrack_matched_EndY_sce = this_mcp.endY_sce;

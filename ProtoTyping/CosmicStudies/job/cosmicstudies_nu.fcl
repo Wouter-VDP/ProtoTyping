@@ -3,3 +3,4 @@
 physics.analyzers.cosmicstudies.is_data: false
 physics.analyzers.cosmicstudies.is_true_nu: true
 physics.analyzers.cosmicstudies.is_slimmed: true
+physics.analyzers.cosmicstudies.is_mcc9: true

@@ -97,11 +97,11 @@ class CosmicStudies : public art::EDAnalyzer
     std::string m_beam_simpleflash_producer;
     std::string m_beam_ophit_producer;
 
-    bool m_is_lite;
+    bool m_is_mcc9;
     bool m_is_data;
     bool m_is_true_nu;
     bool m_verb;
-    bool m_simmed;
+    bool m_slimmed;
 
     // Other private fields
     PandoraInterfaceHelper pandoraHelper;
@@ -227,6 +227,7 @@ class CosmicStudies : public art::EDAnalyzer
     bool fTrack_matched_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
     float fTrack_matched_StartX_sce; // spacecharge corrected version of the tpc edge or the inside start end point.
     float fTrack_matched_StartY_sce;
+    float fTrack_matched_StartY;
     float fTrack_matched_StartZ_sce;
     float fTrack_matched_EndX_sce;
     float fTrack_matched_EndY_sce;
@@ -256,13 +257,15 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     art::ServiceHandle<art::TFileService> tfs;
 
     this->reconfigure(p);
+    mcpHelper.Configure(m_is_mcc9);
 
     //// Check if things are set up properly:
     std::cout << std::endl;
     std::cout << "[CosmicStudies constructor] Checking set-up" << std::endl;
     std::cout << "[CosmicStudies constructor] verbose_output " << m_verb << std::endl;
-    std::cout << "[CosmicStudies constructor] is_lite " << m_is_lite << std::endl;
+    std::cout << "[CosmicStudies constructor] is_mcc9 " << m_is_mcc9 << std::endl;
     std::cout << "[CosmicStudies constructor] is_data " << m_is_data << std::endl;
+    std::cout << "[CosmicStudies constructor] is_slimmed " << m_slimmed << std::endl;
     std::cout << "[CosmicStudies constructor] is_true_nu " << m_is_true_nu << std::endl;
 
     //// Tree for every subrun
@@ -469,6 +472,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fPFParticlesTree->Branch("track_matched_partinside", &fTrack_matched_PartInside, "track_matched_partinside/O");
         fPFParticlesTree->Branch("track_matched_startx_sce", &fTrack_matched_StartX_sce, "track_matched_startx_sce/F");
         fPFParticlesTree->Branch("track_matched_starty_sce", &fTrack_matched_StartY_sce, "track_matched_starty_sce/F");
+        fPFParticlesTree->Branch("track_matched_starty", &fTrack_matched_StartY, "track_matched_starty/F");
         fPFParticlesTree->Branch("track_matched_startz_sce", &fTrack_matched_StartZ_sce, "track_matched_startz_sce/F");
         fPFParticlesTree->Branch("track_matched_endx_sce", &fTrack_matched_EndX_sce, "track_matched_endx_sce/F");
         fPFParticlesTree->Branch("track_matched_endy_sce", &fTrack_matched_EndY_sce, "track_matched_endy_sce/F");
@@ -497,6 +501,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fCRTcrossTree->Branch("event", &fEvent, "event/i");
         fCRTcrossTree->Branch("run", &fRun, "run/i");
         fCRTcrossTree->Branch("subrun", &fSubrun, "subrun/i");
+        fCRTcrossTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");   // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
         fCRTcrossTree->Branch("cross_x", &fCrossX, "cross_x/F");
         fCRTcrossTree->Branch("cross_y", &fCrossY, "cross_y/F");
         fCRTcrossTree->Branch("cross_z", &fCrossZ, "cross_z/F");
@@ -505,6 +510,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fCRTcrossTree->Branch("mc_time", &fMc_Time, "cross_x/F");
         fCRTcrossTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
         fCRTcrossTree->Branch("mc_process", &fMc_Process, "mc_process/i");
+        fCRTcrossTree->Branch("mc_neutrino_origin", &fMc_kBeamNeutrino, "mc_neutrino_origin/O");
     }
 }
 
@@ -519,10 +525,10 @@ void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
     m_beam_ophit_producer = p.get<std::string>("beam_ophit_producer", "ophitBeam");
 
     m_verb = p.get<bool>("verbose_output", true);
-    m_is_lite = p.get<bool>("is_lite", true);
+    m_is_mcc9 = p.get<bool>("is_mcc9", false);
     m_is_data = p.get<bool>("is_data", false);
     m_is_true_nu = p.get<bool>("is_true_nu", false);
-    m_simmed = p.get<bool>("is_slimmed", false);
+    m_slimmed = p.get<bool>("is_slimmed", false);
 }
 
 // Clear once per event
@@ -553,6 +559,10 @@ void CosmicStudies::clear()
     fNu_time.clear();
     fNu_pdg_code.clear();
     fNu_ccnc.clear();
+
+    // Make sure this is set to false if the event does not contain a neutrino, in that case this field should never be changed
+    fMc_kBeamNeutrino = false;
+    fTrack_matched_kBeamNeutrino = false;
 }
 
 // Clear once per cluster

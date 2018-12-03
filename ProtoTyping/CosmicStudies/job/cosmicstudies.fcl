@@ -6,7 +6,7 @@ cosmicstudies_analyzer:
 { 
     module_type:                "CosmicStudies"
     pfp_producer:               "pandoraCosmic"
-    is_lite:                    true
+    is_mcc9:                    false
     is_data:                    false
     is_true_nu:                 false
     is_slimmed:                 false
@@ -31,7 +31,7 @@ services: {
   TPCEnergyCalibService:         @local::microboone_tpcenergycalib_service
   SpaceCharge:                   @local::microboone_spacecharge
 
-  scheduler:               { defaultExceptions: false }    # Make all uncaught exceptions fatal.
+  scheduler:    { defaultExceptions: false }    # Make all uncaught exceptions fatal.
   TFileService: { fileName: "CosmicStudies_tree.root" }
 }
 
