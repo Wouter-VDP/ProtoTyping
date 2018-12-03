@@ -90,6 +90,10 @@ class CosmicStudies : public art::EDAnalyzer
   private:
     // FCL parameters
     std::string m_pfp_producer;
+    std::string m_spacepoint_producer;
+    std::string m_hitfinder_producer;
+    std::string m_geant_producer;
+    std::string m_hit_mcp_producer;
     std::string m_cosmic_opflash_producer;
     std::string m_cosmic_simpleflash_producer;
     std::string m_cosmic_ophit_producer;
@@ -404,6 +408,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fSimpleCosmicFlashesTree->Branch("event", &fEvent, "event/i");
     fSimpleCosmicFlashesTree->Branch("run", &fRun, "run/i");
     fSimpleCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
+    fSimpleCosmicFlashesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");   // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
     fSimpleCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
     fSimpleCosmicFlashesTree->Branch("num_flashes", &fNumSimpleCosmicFlashes, "num_flashes/i");
     fSimpleCosmicFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
@@ -516,7 +521,11 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
 
 void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
 {
-    m_pfp_producer = p.get<std::string>("pfp_producer", "pandoraNu");
+    m_pfp_producer = p.get<std::string>("pfp_producer", "pandoraCosmic");
+    m_spacepoint_producer = p.get<std::string>("spacepoint_producer", "pandoraCosmic");
+    m_hitfinder_producer = p.get<std::string>("hitfinder_producer", "pandgaushitoraNu");
+    m_geant_producer = p.get<std::string>("geant_producer", "largeant");
+    m_hit_mcp_producer = p.get<std::string>("hit_mcp_producer", "gaushitTruthMatch");
     m_cosmic_simpleflash_producer = p.get<std::string>("cosmic_simpleflash_producer", "simpleFlashCosmic");
     m_cosmic_opflash_producer = p.get<std::string>("cosmic_opflash_producer", "opflashCosmic");
     m_cosmic_ophit_producer = p.get<std::string>("cosmic_ophit_producer", "ophitCosmic");

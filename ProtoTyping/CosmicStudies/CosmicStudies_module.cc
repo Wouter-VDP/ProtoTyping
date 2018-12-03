@@ -13,12 +13,12 @@ void CosmicStudies::analyze(art::Event const &evt)
   {
     if (!m_slimmed)
     {
-      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant");
+      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, m_hitfinder_producer, m_geant_producer);
       std::cout << "[CosmicStudies] Reco-Truth matcher configured (full file)." << std::endl;
     }
     else
     {
-      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, "gaushit", "largeant", "gaushitTruthMatch");
+      pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, m_hitfinder_producer, m_geant_producer, m_hit_mcp_producer);
       std::cout << "[CosmicStudies] Reco-Truth matcher configured (slimmed file)." << std::endl;
     }
     // Get the map PFP->MCP and the set of MCPs
