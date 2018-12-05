@@ -50,10 +50,10 @@
 
 namespace constants
 {
-const float MCP_E_CUT = 0.1;         // Only save MC particles above this energy
-const float PFP_LENGTH_CUT = 5.0;    // Only save reconstructed tracks above this length
-const float MUON_M_MEV = 105.658;    // Mass of muons, in MeV
-const float CRT_E_CUT = 0.05;        // Minimum particle energy
+const float MCP_E_CUT = 0.1;      // Only save MC particles above this energy
+const float PFP_LENGTH_CUT = 5.0; // Only save reconstructed tracks above this length
+const float MUON_M_MEV = 105.658; // Mass of muons, in MeV
+const float CRT_E_CUT = 0.05;     // Minimum particle energy to create a crt hit
 } // namespace constants
 
 class CosmicStudies : public art::EDAnalyzer
@@ -231,11 +231,16 @@ class CosmicStudies : public art::EDAnalyzer
     bool fTrack_matched_PartInside;  // This means that the track is crossing, starts/ends inside, is completely inside.
     float fTrack_matched_StartX_sce; // spacecharge corrected version of the tpc edge or the inside start end point.
     float fTrack_matched_StartY_sce;
-    float fTrack_matched_StartY;
     float fTrack_matched_StartZ_sce;
     float fTrack_matched_EndX_sce;
     float fTrack_matched_EndY_sce;
     float fTrack_matched_EndZ_sce;
+    float fTrack_matched_StartX; // spacecharge corrected version of the tpc edge or the inside start end point.
+    float fTrack_matched_StartY;
+    float fTrack_matched_StartZ;
+    float fTrack_matched_EndX;
+    float fTrack_matched_EndY;
+    float fTrack_matched_EndZ;
     float fTrack_matched_LengthTPC;
     float fTrack_matched_Length_sce;
     float fTrack_matched_StartMomentumX;
@@ -408,7 +413,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     fSimpleCosmicFlashesTree->Branch("event", &fEvent, "event/i");
     fSimpleCosmicFlashesTree->Branch("run", &fRun, "run/i");
     fSimpleCosmicFlashesTree->Branch("subrun", &fSubrun, "subrun/i");
-    fSimpleCosmicFlashesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");   // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
+    fSimpleCosmicFlashesTree->Branch("num_mcp", &fNumMcp, "num_mcp/i"); // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
     fSimpleCosmicFlashesTree->Branch("dataset_prescale_factor", &fDatasetPrescaleFactor, "dataset_prescale_factor/F");
     fSimpleCosmicFlashesTree->Branch("num_flashes", &fNumSimpleCosmicFlashes, "num_flashes/i");
     fSimpleCosmicFlashesTree->Branch("flash_time", &fFlash_Time, "flash_time/F");
@@ -468,16 +473,21 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
     {
         fPFParticlesTree->Branch("track_matched_pdgcode", &fTrack_matched_PdgCode, "track_matched_pdgcode/I");
         fPFParticlesTree->Branch("track_matched_energy", &fTrack_matchedE, "track_matched_energy/F");
-        fPFParticlesTree->Branch("track_matched_kBeamNeutrino", &fTrack_matched_kBeamNeutrino, "track_matched_kBeamNeutrino/F");
+        fPFParticlesTree->Branch("track_matched_kBeamNeutrino", &fTrack_matched_kBeamNeutrino, "track_matched_kBeamNeutrino/O");
         fPFParticlesTree->Branch("track_matched_time", &fTrack_matched_Time, "track_matched_time/F");
         fPFParticlesTree->Branch("track_matched_process", &fTrack_matched_Process, "track_matched_process/i");
         fPFParticlesTree->Branch("track_matched_end_process", &fTrack_matched_EndProcess, "track_matched_end_process/i");
         fPFParticlesTree->Branch("track_matched_startinside", &fTrack_matched_StartInside, "track_matched_startinside/O");
         fPFParticlesTree->Branch("track_matched_endinside", &fTrack_matched_EndInside, "track_matched_endinside/O");
         fPFParticlesTree->Branch("track_matched_partinside", &fTrack_matched_PartInside, "track_matched_partinside/O");
+        fPFParticlesTree->Branch("track_matched_startx", &fTrack_matched_StartX, "track_matched_startx/F");
+        fPFParticlesTree->Branch("track_matched_starty", &fTrack_matched_StartY, "track_matched_starty/F");
+        fPFParticlesTree->Branch("track_matched_startz", &fTrack_matched_StartZ, "track_matched_startz/F");
+        fPFParticlesTree->Branch("track_matched_endx", &fTrack_matched_EndX, "track_matched_endx/F");
+        fPFParticlesTree->Branch("track_matched_endy", &fTrack_matched_EndY, "track_matched_endy/F");
+        fPFParticlesTree->Branch("track_matched_endz", &fTrack_matched_EndZ, "track_matched_endz/F");
         fPFParticlesTree->Branch("track_matched_startx_sce", &fTrack_matched_StartX_sce, "track_matched_startx_sce/F");
         fPFParticlesTree->Branch("track_matched_starty_sce", &fTrack_matched_StartY_sce, "track_matched_starty_sce/F");
-        fPFParticlesTree->Branch("track_matched_starty", &fTrack_matched_StartY, "track_matched_starty/F");
         fPFParticlesTree->Branch("track_matched_startz_sce", &fTrack_matched_StartZ_sce, "track_matched_startz_sce/F");
         fPFParticlesTree->Branch("track_matched_endx_sce", &fTrack_matched_EndX_sce, "track_matched_endx_sce/F");
         fPFParticlesTree->Branch("track_matched_endy_sce", &fTrack_matched_EndY_sce, "track_matched_endy_sce/F");
@@ -506,7 +516,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fCRTcrossTree->Branch("event", &fEvent, "event/i");
         fCRTcrossTree->Branch("run", &fRun, "run/i");
         fCRTcrossTree->Branch("subrun", &fSubrun, "subrun/i");
-        fCRTcrossTree->Branch("num_mcp", &fNumMcp, "num_mcp/i");   // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
+        fCRTcrossTree->Branch("num_mcp", &fNumMcp, "num_mcp/i"); // This field is needed to distinguish mcc9 events with the same event/subrun/run tag.
         fCRTcrossTree->Branch("cross_x", &fCrossX, "cross_x/F");
         fCRTcrossTree->Branch("cross_y", &fCrossY, "cross_y/F");
         fCRTcrossTree->Branch("cross_z", &fCrossZ, "cross_z/F");
@@ -523,7 +533,7 @@ void CosmicStudies::reconfigure(fhicl::ParameterSet const &p)
 {
     m_pfp_producer = p.get<std::string>("pfp_producer", "pandoraCosmic");
     m_spacepoint_producer = p.get<std::string>("spacepoint_producer", "pandoraCosmic");
-    m_hitfinder_producer = p.get<std::string>("hitfinder_producer", "pandgaushitoraNu");
+    m_hitfinder_producer = p.get<std::string>("hitfinder_producer", "gaushit");
     m_geant_producer = p.get<std::string>("geant_producer", "largeant");
     m_hit_mcp_producer = p.get<std::string>("hit_mcp_producer", "gaushitTruthMatch");
     m_cosmic_simpleflash_producer = p.get<std::string>("cosmic_simpleflash_producer", "simpleFlashCosmic");

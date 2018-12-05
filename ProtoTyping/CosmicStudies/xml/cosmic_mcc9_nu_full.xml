@@ -3,13 +3,13 @@
 <!ENTITY name "bnb_nu_full_mcc9_nov">
 <!ENTITY version "v07_11_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "prodgenie_bnb_nu_cosmics_mcc9.0_nov_fullmc_reco2">
+<!ENTITY dataset "wvdp_prodgenie_bnb_nu_cosmics_mcc9.0_nov_fullmc_reco2_4000">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>100000</numevents>
+    <numevents>80000</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/CosmicStudies/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_11_2Dec.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_11_4Dec.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -35,9 +35,9 @@
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>500</numjobs>
-        <disk>20GB</disk>
-        <memory>2500</memory>
+        <numjobs>400</numjobs>
+        <disk>10GB</disk>
+        <memory>1900</memory>
         <maxfilesperjob>10</maxfilesperjob>
         <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 

@@ -44,6 +44,7 @@ struct MCParticleInfo
     float length;
     float lengthTPC;
     float length_sce;
+    float scatterdist; // Difference between the true end point and the start+dir*length point
 };
 
 struct CRTcrossing
@@ -67,6 +68,8 @@ class MCParticleHelper
     std::set<std::string> getProcesses() { return string_process; };
     MCParticleInfo fillMCP(simb::MCParticle const &mcparticle);
     CRTcrossing isCrossing(simb::MCParticle const &mcparticle);
+    bool inTPC(const TVector3 x) const;
+    void crossTPC(MCParticleInfo &this_mcp, const simb::MCTrajectory &traj);
 
   private:
     geo::BoxBoundedGeo theTpcGeo;
@@ -175,13 +178,32 @@ MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
 
     TVector3 mc_start = mcparticle.Position().Vect();
     TVector3 mc_end = mcparticle.EndPosition().Vect();
+    this_mcp.length = (mc_start - mc_end).Mag(); // This is the total length, not the length in the detector!
+    this_mcp.startInside = inTPC(mc_start);
+    this_mcp.endInside = inTPC(mc_end);
 
-    std::vector<double> start = {mc_start.X(), mc_start.Y(), mc_start.Z()};
-    std::vector<double> end = {mc_end.X(), mc_end.Y(), mc_end.Z()};
-    this_mcp.startInside = geoHelper.isActive(start);
-    this_mcp.endInside = geoHelper.isActive(end);
-    this_mcp.length = geoHelper.distance(start, end); // This is the total length, not the length in the detector!
+    if (this_mcp.startInside)
+    {
+        this_mcp.startX_tpc = mc_start.X();
+        this_mcp.startY_tpc = mc_start.Y();
+        this_mcp.startZ_tpc = mc_start.Z();
+    }
+    if (this_mcp.endInside)
+    {
+        this_mcp.endX_tpc = mc_end.X();
+        this_mcp.endY_tpc = mc_end.Y();
+        this_mcp.endZ_tpc = mc_end.Z();
+    }
+    if (!this_mcp.startInside || !this_mcp.endInside)
+    {
+        crossTPC(this_mcp, mcparticle.Trajectory());
+    }
+    else
+    {
+        this_mcp.partInside = true;
+    }
 
+    /*
     this_mcp.partInside = true;
     //Find the section that is inside the tpc
     if (!this_mcp.startInside || !this_mcp.endInside)
@@ -262,6 +284,7 @@ MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
         this_mcp.endY_tpc = mc_end.Y();
         this_mcp.endZ_tpc = mc_end.Z();
     }
+    */
 
     if (this_mcp.partInside)
     {
@@ -299,6 +322,15 @@ MCParticleInfo MCParticleHelper::fillMCP(simb::MCParticle const &mcparticle)
         std::vector<float> end_sce = {this_mcp.endX_sce, this_mcp.endY_sce, this_mcp.endZ_sce};
         this_mcp.length_sce = geoHelper.distance(start_sce, end_sce);
     }
+    else // not part inside
+    {
+        this_mcp.lengthTPC = 0;
+        this_mcp.length_sce = 0;
+    }
+
+    // Calculate the scatterdist:
+    this_mcp.scatterdist = (mcparticle.Position().Vect() + mcparticle.Momentum().Vect().Unit() * this_mcp.length - mcparticle.EndPosition().Vect()).Mag();
+
     return this_mcp;
 }
 
@@ -334,6 +366,64 @@ CRTcrossing MCParticleHelper::isCrossing(simb::MCParticle const &mcparticle)
         }     // if t is between 0 and 1
     }
     return this_cross;
+}
+
+bool MCParticleHelper::inTPC(const TVector3 x) const
+{
+    bool is_x = x.X() >= theTpcGeo.MinX()  && x.X() <= theTpcGeo.MaxX() ;
+    bool is_y = x.Y() >= theTpcGeo.MinY()  && x.Y() <= theTpcGeo.MaxY() ;
+    bool is_z = x.Z() >= theTpcGeo.MinZ()  && x.Z() <= theTpcGeo.MaxZ() ;
+    return is_x && is_y && is_z;
+}
+
+void MCParticleHelper::crossTPC(MCParticleInfo &this_mcp, const simb::MCTrajectory &traj)
+{
+    this_mcp.partInside = this_mcp.startInside;
+
+    TVector3 pt1 = traj.Position(0).Vect();
+    bool pt1_inTPC =inTPC(pt1);
+
+    for (size_t i = 1; i < traj.size(); i++)
+    {
+        TVector3 pt2 = traj.Position(i).Vect();
+        bool pt2_inTPC =inTPC(pt2);
+
+        if (pt1_inTPC != pt2_inTPC) // Crossing the TPC!
+        {
+            // std::cout << "[MCParticleHelper::crossTPC] " << i << "\t" << pt2.X() << "\t" << pt2.Y() << "\t" << pt2.Z() << std::endl;
+            TVector3 pt1_dir = pt2-pt1;
+            std::vector<TVector3> intersections = theTpcGeo.GetIntersections(pt1, pt1_dir);
+            if (intersections.size() < 2)
+            {
+                std::cout << "[MCParticleHelper::crossTPC] crossing expected but only one found!" << std::endl;
+                std::cout << "[MCParticleHelper::crossTPC] " << pt1.X() << "\t" << pt1.Y() << "\t" << pt1.Z() << std::endl;
+                std::cout << "[MCParticleHelper::crossTPC] " << pt2.X() << "\t" << pt2.Y() << "\t" << pt2.Z() << std::endl;
+            }
+            if (!this_mcp.partInside)             // Entering the TPC
+            {
+                TVector3 mc_cross = intersections[0]; // Take the first crossing point.
+                this_mcp.partInside = true;
+                this_mcp.startX_tpc = mc_cross.X();
+                this_mcp.startY_tpc = mc_cross.Y();
+                this_mcp.startZ_tpc = mc_cross.Z();
+                if (this_mcp.endInside)
+                {
+                    return; // The end point is already filled in.
+                }
+            }
+            else // Exiting the TPC
+            {
+                TVector3 mc_cross = intersections[1]; // Take the first crossing point.
+                this_mcp.endX_tpc = mc_cross.X();
+                this_mcp.endY_tpc = mc_cross.Y();
+                this_mcp.endZ_tpc = mc_cross.Z();
+                // std::cout << "[MCParticleHelper::crossTPC] " << mc_cross.X() << "\t" << mc_cross.Y() << "\t" << mc_cross.Z() << std::endl;
+                return;
+            }
+        }
+        pt1 = pt2;
+        pt1_inTPC = pt2_inTPC;
+    }
 }
 
 #endif

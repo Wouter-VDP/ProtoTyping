@@ -169,7 +169,7 @@ void CosmicStudies::fill_MC(art::Event const &evt)
     simb::MCParticle const &mcparticle = mcparticles_handle->at(i_mcp);
     // Important, only save MC particles with energy over 100MeV, THIS WILL SAVE ALL MUONS.
     uint pdg = abs(mcparticle.PdgCode());
-    bool pdg_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 111 or pdg == 22 or pdg == 2112 or pdg == 2212;
+    bool pdg_ok = (pdg == 11 or pdg == 13 or pdg == 211 or pdg == 111 or pdg == 22 or pdg == 2112 or pdg == 2212);
     if (mcparticle.E() > constants::MCP_E_CUT && pdg_ok)
     {
       fMc_Time = mcparticle.T();
@@ -416,9 +416,16 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
         fTrack_matched_StartInside = this_mcp.startInside;
         fTrack_matched_EndInside = this_mcp.endInside;
         fTrack_matched_PartInside = this_mcp.partInside;
+
+        fTrack_matched_StartX = this_mcp.startX_tpc;
+        fTrack_matched_StartY = this_mcp.startY_tpc;
+        fTrack_matched_StartZ = this_mcp.startZ_tpc;
+        fTrack_matched_EndX = this_mcp.endX_tpc;
+        fTrack_matched_EndY = this_mcp.endY_tpc;
+        fTrack_matched_EndZ = this_mcp.endZ_tpc;
+
         fTrack_matched_StartX_sce = this_mcp.startX_sce;
         fTrack_matched_StartY_sce = this_mcp.startY_sce;
-        fTrack_matched_StartY = this_mcp.startY_tpc;
         fTrack_matched_StartZ_sce = this_mcp.startZ_sce;
         fTrack_matched_EndX_sce = this_mcp.endX_sce;
         fTrack_matched_EndY_sce = this_mcp.endY_sce;
