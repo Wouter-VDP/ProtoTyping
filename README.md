@@ -1,5 +1,5 @@
 # ProtoTyping UPS product
-Collecion of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v07_11_00 and higher.
+Collection of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v07_11_00 and higher.
 
 ## CosmicStudies
 This analyser stores PMT and TPC information and is used to run on CORSICA and BNBext files.
@@ -13,6 +13,7 @@ Module to store the CRThit info in data and MC
 
 ## job
 Contains filelists of differenc samples and fcl file to run over them. The fcl file combine the thow analysers (CosmicStudies and CRTstudies) in one project. A set of xml files to run over MC and BNB extrenal are provided.
+
 
 
 ### Contact
