@@ -4,7 +4,9 @@ BEGIN_PROLOG
 
 crtdata_analyzer:
 { 
-    module_type:                "CRTdata"
+    module_type:         "CRTdata"
+    CRTHit_producer:     "merger"
+    is_data:             true
 }
 
 END_PROLOG

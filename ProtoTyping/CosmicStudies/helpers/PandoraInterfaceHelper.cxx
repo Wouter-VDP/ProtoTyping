@@ -34,7 +34,7 @@ void PandoraInterfaceHelper::get_daughter_tracks(std::vector<size_t> pf_ids,
   }
   catch (...)
   {
-    std::cout << "[PandoraLEE] "
+    std::cout << "[PandoraInterfaceHelper] "
               << "Error getting daughter tracks" << std::endl;
   }
 }

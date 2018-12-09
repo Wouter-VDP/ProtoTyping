@@ -36,22 +36,22 @@ void CosmicStudies::analyze(art::Event const &evt)
   //// Filling the flashes ------------------------------------------------------------
   art::ValidHandle<std::vector<recob::OpFlash>> const &simple_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_simpleflash_producer);
   fNumSimpleBeamFlashes = simple_beam_handle->size();
-  std::cout << "[ProtoTyping] fNumSimpleBeamFlashes: " << fNumSimpleBeamFlashes << std::endl;
+  std::cout << "[CosmicStudies] fNumSimpleBeamFlashes: " << fNumSimpleBeamFlashes << std::endl;
   fill_flash(simple_beam_handle, fNumSimpleBeamFlashes, fSimpleBeamFlashesTree);
 
   art::ValidHandle<std::vector<recob::OpFlash>> const &op_beam_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_beam_opflash_producer);
   fNumOpBeamFlashes = op_beam_handle->size();
-  std::cout << "[ProtoTyping] fNumOpBeamFlashes: " << fNumOpBeamFlashes << std::endl;
+  std::cout << "[CosmicStudies] fNumOpBeamFlashes: " << fNumOpBeamFlashes << std::endl;
   fill_flash(op_beam_handle, fNumOpBeamFlashes, fOpBeamFlashesTree);
 
   art::ValidHandle<std::vector<recob::OpFlash>> const &simple_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_simpleflash_producer);
   fNumSimpleCosmicFlashes = simple_cosmic_handle->size();
-  std::cout << "[ProtoTyping] fNumSimpleCosmicFlashes: " << fNumSimpleCosmicFlashes << std::endl;
+  std::cout << "[CosmicStudies] fNumSimpleCosmicFlashes: " << fNumSimpleCosmicFlashes << std::endl;
   fill_flash(simple_cosmic_handle, fNumSimpleCosmicFlashes, fSimpleCosmicFlashesTree);
 
   art::ValidHandle<std::vector<recob::OpFlash>> const &op_cosmic_handle = evt.getValidHandle<std::vector<recob::OpFlash>>(m_cosmic_opflash_producer);
   fNumOpCosmicFlashes = op_cosmic_handle->size();
-  std::cout << "[ProtoTyping] fNumOpCosmicFlashes: " << fNumOpCosmicFlashes << std::endl;
+  std::cout << "[CosmicStudies] fNumOpCosmicFlashes: " << fNumOpCosmicFlashes << std::endl;
   fill_flash(op_cosmic_handle, fNumOpCosmicFlashes, fOpCosmicFlashesTree);
   ////---------------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ void CosmicStudies::endSubRun(const art::SubRun &sr)
   if (m_verb)
   {
     std::set<std::string> string_process = mcpHelper.getProcesses();
-    std::cout << "string_process has members: " << string_process.size() << std::endl;
+    std::cout << "[CosmicStudies::endSubRun] string_process has members: " << string_process.size() << std::endl;
     for (auto elem : string_process)
     {
       std::cout << elem << ", ";
@@ -119,7 +119,6 @@ void CosmicStudies::fill_flash(art::ValidHandle<std::vector<recob::OpFlash>> con
 
     for (uint i_pmt = 0; i_pmt < 32; i_pmt++)
     {
-      //std::cout << i_pmt << "\t" << fFlash_TotalPE << "\t" << fFlash_TotalPE / 10.0 << "\t" << flash.PE(i_pmt) << "\t" << fFlash_num10percentPMT << std::endl;
       if (flash.PE(i_pmt) > (fFlash_TotalPE / 10.0))
       {
         fFlash_num10percentPMT++;
@@ -158,7 +157,7 @@ void CosmicStudies::fill_MC(art::Event const &evt)
     }
   }
 
-  auto const &mcparticles_handle = evt.getValidHandle<std::vector<simb::MCParticle>>("largeant");
+  auto const &mcparticles_handle = evt.getValidHandle<std::vector<simb::MCParticle>>(m_geant_producer);
   std::vector<art::Ptr<simb::MCParticle>> mcp_v;
   art::fill_ptr_vector(mcp_v, mcparticles_handle);
 
@@ -189,14 +188,10 @@ void CosmicStudies::fill_MC(art::Event const &evt)
       if (m_is_true_nu)
       {
         // Is this MC particle neutrino?
-        const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, "largeant", mcparticle.TrackId());
+        const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, m_geant_producer, mcparticle.TrackId());
         if (mctruth->Origin() == simb::kBeamNeutrino)
         {
           fMc_kBeamNeutrino = true;
-          if (m_verb)
-          {
-            std::cout << "MCParticle coming from a neutrino found! " << fMc_PdgCode << std::endl;
-          }
         }
         else
         {
@@ -227,13 +222,14 @@ void CosmicStudies::fill_MC(art::Event const &evt)
 
       // Check if we have a CRT crossing:
       // Require a charged particle, a minimum energy and an end point below the CRT in y:
-      bool pdg_crt_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212;
+      bool pdg_crt_ok = pdg == 11 or pdg == 13 or pdg == 211 or pdg == 2212 or pdg == 2112;
       if (pdg_crt_ok && fMc_E > constants::CRT_E_CUT && fMc_EndY < constants::BY)
       {
         CRTcrossing this_crossing = mcpHelper.isCrossing(mcparticle);
         fCRT_crossed = this_crossing.CRT_cross;
         if (fCRT_crossed)
         {
+          fNumCross++;
           fCrossE = this_crossing.crossE;
           fCrossT = this_crossing.crossT;
           fCrossX = this_crossing.crossX;
@@ -242,11 +238,12 @@ void CosmicStudies::fill_MC(art::Event const &evt)
           fCRTcrossTree->Fill();
         }
       }
-
       fMCParticlesTree->Fill();
       fNumMcp_saved++; //Counter
     }
   }
+  std::cout << "[CosmicStudies::fill_MC] ";
+  std::cout << "Number of MC CRT crossing particles in event: " << fNumCross << std::endl;
 }
 
 void CosmicStudies::fill_TPCreco(art::Event const &evt)
@@ -332,7 +329,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
       art::Ptr<recob::Track> const &track_obj = track_per_pfpart.at(i_pfp);
       if (track_obj.isNull())
       {
-        std::cout << "[LEE Analyzer] track is Null" << std::endl;
+        std::cout << "[CosmicStudies::fill_TPCreco] track is Null" << std::endl;
         fTrack_Valid = false;
       }
       else
@@ -379,7 +376,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
     }
     catch (...)
     {
-      std::cout << "No vertex found for " << fPdgCode << " with " << fNhits << std::endl;
+      std::cout << "[CosmicStudies::fill_TPCreco] No vertex found for " << fPdgCode << " with " << fNhits << std::endl;
     }
 
     // Fill the reco truth matched fields
@@ -392,7 +389,7 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
         if (m_is_true_nu)
         {
           // Is this MC particle neutrino?
-          const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, "largeant", matched_mcp->TrackId());
+          const art::Ptr<simb::MCTruth> mctruth = pandoraHelper.TrackIDToMCTruth(evt, m_geant_producer, matched_mcp->TrackId());
           if (mctruth->Origin() == simb::kBeamNeutrino)
           {
             fTrack_matched_kBeamNeutrino = true;
@@ -439,18 +436,6 @@ void CosmicStudies::fill_TPCreco(art::Event const &evt)
     {
       fPFParticlesTree->Fill();
       fNumPfp_saved++;
-      /*
-      if (m_verb)
-      {
-        // For good tracks that are matched, verify matching and MCS
-        if (fTrack_Length > 100 && fTrack_matched_PdgCode != 0)
-        {
-          std::cout << "Track with length " << fTrack_Length << ", has MCS energy " << fTrack_MCS_mom;
-          std::cout << " ( atched PDG: " << fTrack_matched_PdgCode << ", length_sce: " << fTrack_matched_Length_sce;
-          std::cout << ", length_tpc: " << fTrack_matched_LengthTPC << ", energy: " << fTrack_matchedE << ")" << std::endl;
-        }
-      }
-      */
     }
   }
 }

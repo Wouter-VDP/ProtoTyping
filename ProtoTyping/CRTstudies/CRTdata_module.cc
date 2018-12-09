@@ -39,7 +39,8 @@ public:
   void analyze(art::Event const &e) override;
 
 private:
-  const std::string m_CRTHitProducer = "merger";
+  bool m_is_data;
+  std::string m_CRTHit_producer;
   const std::string m_DAQHeaderProducer = "daq";
   const float m_DTOffset = 68600.; // in microseconds
 
@@ -70,6 +71,13 @@ CRTdata::CRTdata(fhicl::ParameterSet const &p)
 {
   art::ServiceHandle<art::TFileService> tfs;
 
+  m_is_data = p.get<bool>("is_data", false);
+  m_CRTHit_producer = p.get<std::string>("CRTHit_producer", "merger");
+
+  std::cout << std::endl;
+  std::cout << "[CRTdata constructor] CRTHit_producer: " << m_CRTHit_producer << std::endl;
+  std::cout << "[CRTdata constructor] is_data: " << m_is_data << std::endl;
+
   //// Tree for every CRT hit
   fCRTTree = tfs->make<TTree>("CRT", "CRT Tree");
 
@@ -99,26 +107,34 @@ void CRTdata::analyze(art::Event const &e)
   fSubrun = e.subRun();
   fRun = e.run();
 
-  // Declare an object for the GPS timestamp of the event so that you can offset the cosmic t0 times.
-  art::Handle<raw::DAQHeaderTimeUBooNE> rawHandle_DAQHeader;
-  e.getByLabel(m_DAQHeaderProducer, rawHandle_DAQHeader);
+  float evt_timeGPS_nsec = 0;
 
-  raw::DAQHeaderTimeUBooNE const &my_DAQHeader(*rawHandle_DAQHeader);
-  art::Timestamp evtTimeGPS = my_DAQHeader.gps_time();
-  float evt_timeGPS_nsec = evtTimeGPS.timeLow();
+  if (m_is_data)
+  {
+    // Declare an object for the GPS timestamp of the event so that you can offset the cosmic t0 times.
+    art::Handle<raw::DAQHeaderTimeUBooNE> rawHandle_DAQHeader;
+    e.getByLabel(m_DAQHeaderProducer, rawHandle_DAQHeader);
+
+    raw::DAQHeaderTimeUBooNE const &my_DAQHeader(*rawHandle_DAQHeader);
+    art::Timestamp evtTimeGPS = my_DAQHeader.gps_time();
+    evt_timeGPS_nsec = evtTimeGPS.timeLow();
+  }
 
   // Load CRT hits.
   art::Handle<std::vector<crt::CRTHit>> crthit_h;
-  e.getByLabel(m_CRTHitProducer, crthit_h);
+  e.getByLabel(m_CRTHit_producer, crthit_h);
+
+  // Set the variable for the number of CRT hits in the event.
   if (!crthit_h.isValid())
   {
-    std::cerr << "... could not locate CRT Hits!" << std::endl;
-    throw std::exception();
+    std::cout << "[CRTdata::analyze] ... could not locate CRT Hits, Event skipped!" << std::endl;
+    return;
   }
 
   // Set the variable for the number of CRT hits in the event.
   fNhits_in_event = crthit_h->size();
-  std::cout << "Number of CRT hits in event:" << fNhits_in_event << std::endl;
+  std::cout << "[CRTdata::analyze] Number of CRT hits in event:" << fNhits_in_event << std::endl;
+  std::cout << std::endl;
 
   for (size_t j = 0; j < fNhits_in_event; j++)
   {

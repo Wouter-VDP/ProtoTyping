@@ -53,7 +53,7 @@ namespace constants
 const float MCP_E_CUT = 0.1;      // Only save MC particles above this energy
 const float PFP_LENGTH_CUT = 5.0; // Only save reconstructed tracks above this length
 const float MUON_M_MEV = 105.658; // Mass of muons, in MeV
-const float CRT_E_CUT = 0.05;     // Minimum particle energy to create a crt hit
+const float CRT_E_CUT = 0.005;     // Minimum particle energy to create a crt hit
 } // namespace constants
 
 class CosmicStudies : public art::EDAnalyzer
@@ -252,6 +252,7 @@ class CosmicStudies : public art::EDAnalyzer
     uint fClusterNhits, fClusterPlane;
 
     TTree *fCRTcrossTree;
+    uint fNumCross;
     float fCrossX;
     float fCrossY;
     float fCrossZ;
@@ -525,6 +526,7 @@ CosmicStudies::CosmicStudies(fhicl::ParameterSet const &p)
         fCRTcrossTree->Branch("mc_time", &fMc_Time, "cross_x/F");
         fCRTcrossTree->Branch("mc_pdg_code", &fMc_PdgCode, "mc_pdg_code/I");
         fCRTcrossTree->Branch("mc_process", &fMc_Process, "mc_process/i");
+        fCRTcrossTree->Branch("mc_energy", &fMc_E, "mc_energy/F");
         fCRTcrossTree->Branch("mc_neutrino_origin", &fMc_kBeamNeutrino, "mc_neutrino_origin/O");
     }
 }
@@ -571,6 +573,8 @@ void CosmicStudies::clear()
     fNumSimpleCosmicFlashes = 0;
     fNumOpCosmicFlashes = 0;
     fNum_nu = 0;
+    fNumCross = 0;
+
     fNu_vtx_x.clear();
     fNu_vtx_y.clear();
     fNu_vtx_z.clear();
