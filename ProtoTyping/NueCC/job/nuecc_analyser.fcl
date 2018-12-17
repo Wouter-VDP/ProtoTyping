@@ -1,0 +1,11 @@
+BEGIN_PROLOG
+
+nuecc_analyser :
+{
+    module_type: "NueCC"
+
+    # Input producers
+    PFPproducer:              "pandoraConsolidated"
+}
+
+END_PROLOG

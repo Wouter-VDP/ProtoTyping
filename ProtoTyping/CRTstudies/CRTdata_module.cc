@@ -152,6 +152,10 @@ void CRTdata::analyze(art::Event const &e)
     // Time of the CRT Hit wrt the event timestamp
     fTime = ((fT0_ns - evt_timeGPS_nsec + m_DTOffset) / 1000.);
 
+    std::cout  <<  "fTime " << fTime;
+    std::cout  <<  "\tfT1_ns " << fT1_ns;
+    std::cout  <<  "\tevt_timeGPS_nsec " << evt_timeGPS_nsec << std::endl;
+
     fCRTTree->Fill();
   }
 }

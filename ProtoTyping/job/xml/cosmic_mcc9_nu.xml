@@ -22,8 +22,8 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/CosmicStudies/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_11_4Dec.tar</local>
+        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_11_9Dec.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
