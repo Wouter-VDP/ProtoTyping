@@ -5,7 +5,11 @@ nuecc_analyser :
     module_type: "NueCC"
 
     # Input producers
-    PFPproducer:              "pandoraConsolidated"
+    pfp_producer:              "pandoraFlashEventBuilding"
+    
+    # Settings
+    is_data:                   false
+    has_MC_neutrino:           false
 }
 
 END_PROLOG

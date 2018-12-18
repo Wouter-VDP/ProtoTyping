@@ -1,57 +1,71 @@
-////////////////////////////////////////////////////////////////////////
-// Class:       NueCC
-// Plugin Type: analyzer (art v2_11_03)
-// File:        NueCC_module.cc
-//
-// Generated at Sun Oct 28 14:38:04 2018 by Wouter Van de pontseele using cetskelgen
-// from cetlib version v3_03_01.
-////////////////////////////////////////////////////////////////////////
+#include "NueCC.h"
 
-#include "art/Framework/Core/EDAnalyzer.h"
-#include "art/Framework/Core/ModuleMacros.h"
-#include "art/Framework/Principal/Event.h"
-#include "art/Framework/Principal/Handle.h"
-#include "art/Framework/Principal/Run.h"
-#include "art/Framework/Principal/SubRun.h"
-#include "canvas/Utilities/InputTag.h"
-#include "fhiclcpp/ParameterSet.h"
-#include "art/Framework/Services/Optional/TFileService.h"
-#include "messagefacility/MessageLogger/MessageLogger.h"
-
-#include "TTree.h"
-
-class NueCC;
-
-
-class NueCC : public art::EDAnalyzer {
-public:
-  explicit NueCC(fhicl::ParameterSet const & p);
-  // The compiler-generated destructor is fine for non-base
-  // classes without bare pointers or other resource use.
-
-  // Plugins should not be copied or assigned.
-  NueCC(NueCC const &) = delete;
-  NueCC(NueCC &&) = delete;
-  NueCC & operator = (NueCC const &) = delete;
-  NueCC & operator = (NueCC &&) = delete;
-
-  // Required functions.
-  void analyze(art::Event const & e) override;
-
-private:
-  std::string m_pfp_producer;
-};
-
-DEFINE_ART_MODULE(NueCC)
-
-NueCC::NueCC(fhicl::ParameterSet const & p)
-  :
-  EDAnalyzer(p)  // ,
- // More initializers here.
-{}
-
-void NueCC::analyze(art::Event const & e)
+void NueCC::analyze(art::Event const &evt)
 {
-  std::cout << "[NueCC::analyze]: Hello World" << std::endl;
-  // Implementation of required member function here.
+  clear();
+  fRun = evt.run();
+  fSubrun = evt.subRun();
+  fEvent = evt.id().event();
+  std::cout << "[NueCC::analyze]: Run " << fRun << ", Subrun " << fSubrun << ", Event " << fEvent << std::endl;
+
+  // Fill true neutrino info
+  // TODO
+
+  // -- Fill reco neutrino info --
+  FillReconstructed(evt);
+}
+
+void NueCC::FillReconstructed(art::Event const &evt)
+{
+  auto const &pfparticle_handle = evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
+  if (pfparticle_handle->size() == 0)
+  {
+    std::cout << "[NueCC::FillReconstructed] No reconstructed PFParticles in event." << std::endl;
+  }
+  else
+  {
+    auto const &pfparticles(*pfparticle_handle);
+    for (auto const &pfp : pfparticles)
+    {
+      if (pfp.PdgCode() == 12 || pfp.PdgCode() == 14)
+      {
+        // Reconstructed neutrino info
+        fNu_PDG = pfp.PdgCode();
+        fNumDaughters = pfp.NumDaughters();
+        std::cout << "[NueCC::FillReconstructed] neutrino found! PDG: " << pfp.PdgCode() << " Primary Daughters: " << fNumDaughters << std::endl;
+
+        // Get the map PFP->MCP and the set of MCPs
+        if (!m_isData)
+        {
+          pandoraHelper.Configure(evt, m_pfp_producer, m_pfp_producer, m_hitfinder_producer, m_geant_producer, m_hit_mcp_producer);
+          pandoraHelper.GetRecoToTrueMatches(matchedParticles);
+          std::cout << "[NueCC::FillReconstructed] Reco-Truth matches constructed." << std::endl;
+          for (auto it = matchedParticles.begin(); it != matchedParticles.end(); ++it)
+          {
+            matchedMCParticles.insert(it->second);
+          }
+          std::cout << "[NueCC::FillReconstructed] ";
+          std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
+          std::cout << "[NueCC::FillReconstructed] ";
+          std::cout << "Number of PFPparticles in event: " << pfparticles.size() << std::endl;
+        }
+
+        // Daughters of the neutrino
+        std::vector<size_t> unordered_daugthers;
+        std::cout << "[NueCC::FillReconstructed] Before  traversePFParticleTree, pfp.Self(): " << pfp.Self() << std::endl;
+        pandoraHelper.traversePFParticleTree(pfparticle_handle, pfp.Self(), unordered_daugthers, m_pfp_producer);
+        std::cout << "[NueCC::FillReconstructed] All Daughters: " << unordered_daugthers.size() << std::endl;
+        for (const size_t pfp_id : unordered_daugthers)
+        {
+          FillDaughters(pfparticles.at(pfp_id));
+        }
+      }
+    }
+  }
+}
+
+bool NueCC::FillDaughters(recob::PFParticle const &pfp)
+{
+  std::cout << "Daughter with PDG: " << pfp.PdgCode() << std::endl;
+  return false;
 }
