@@ -24,6 +24,8 @@
 #include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Shower.h"
+#include "lardataobj/RecoBase/Cluster.h"
+#include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
@@ -56,7 +58,6 @@ class NueCC : public art::EDAnalyzer
     void clearEvent();
     void clearDaughter();
 
-    // Extra functions.
     /**
      *  @brief  Collect and fill the reconstructed information.
      *
@@ -65,16 +66,19 @@ class NueCC : public art::EDAnalyzer
     void FillReconstructed(art::Event const &e);
 
     /**
+     *  @brief  Collect and fill the MC based information.
+     *
+     *  @param  e Art event
+     */
+    void FillTruth(art::Event const &e);
+
+    /**
      *  @brief  Fill the tree for every daughter of the neutrino candidate.
      *
      *  @param  pfparticle ptr The Pfparticle corresponding to the daughter.
-     *  @param  PFParticleMap relation between id and pfparticle ptr.
-     *  @param  MetadataVector should be length one, contains metadata of the passed pfp.
      *  @return 1 if succesful, 0 if failure.
      */
-    bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
-                       const lar_pandora::PFParticleMap &particleMap,
-                       const lar_pandora::MetadataVector &metadata_vec);
+    bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp);
 
   private:
     // Fields needed for the analyser
@@ -85,8 +89,22 @@ class NueCC : public art::EDAnalyzer
     bool m_hasMCNeutrino;
     bool m_isData;
 
-    lar_pandora::LArPandoraHelper larpandora;
     PandoraInterfaceHelper pandoraInterfaceHelper;
+
+    // LAr Pandora Helper fields
+    lar_pandora::LArPandoraHelper larpandora;
+    lar_pandora::PFParticleVector pfparticles;
+    lar_pandora::PFParticleVector pfneutrinos;
+    lar_pandora::PFParticleVector pfdaughters;
+    lar_pandora::PFParticleMap particleMap;
+    lar_pandora::PFParticlesToMetadata particlesToMetadata;
+    lar_pandora::PFParticlesToVertices particlesToVertices;
+    lar_pandora::PFParticlesToClusters particlesToClusters;
+    lar_pandora::PFParticlesToSpacePoints particlesToSpacePoints;
+    lar_pandora::ClustersToHits clustersToHits;
+    lar_pandora::HitsToSpacePoints hitsToSpacePoints;
+    lar_pandora::SpacePointsToHits spacePointsToHits;
+    // Used for reco truth matching
     lar_pandora::PFParticlesToMCParticles matchedParticles;
     std::set<art::Ptr<simb::MCParticle>> matchedMCParticles;
 
@@ -108,6 +126,8 @@ class NueCC : public art::EDAnalyzer
     float fNu_Score;
     uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
+    uint fNu_NhitsU, fNu_NhitsV, fNu_NhitsY;
+    uint fNu_NhitsSpacepoints;
     uint fNumPrimaryDaughters;
     uint fNumDaughters;
     uint fNumShowers;
@@ -124,6 +144,8 @@ class NueCC : public art::EDAnalyzer
     bool fHasShowerDaughter;
     bool fIsTrackDaughter;
     float fVx, fVy, fVz;
+    uint fNhitsU, fNhitsV, fNhitsY;
+    uint fNhitsSpacepoints;
     // Matched MCParticle info
     int fTruePDG;
     float fTrueEnergy;
@@ -160,6 +182,10 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("event", &fEvent, "event/i");
     fEventTree->Branch("run", &fRun, "run/i");
     fEventTree->Branch("subrun", &fSubrun, "subrun/i");
+    fEventTree->Branch("hitsU", &fNu_NhitsU, "hitsU/i");
+    fEventTree->Branch("hitsV", &fNu_NhitsV, "hitsV/i");
+    fEventTree->Branch("hitsY", &fNu_NhitsY, "hitsY/i");
+    fEventTree->Branch("hitsSps", &fNu_NhitsSpacepoints, "hitsSps/i");
     fEventTree->Branch("num_primary_daughters", &fNumPrimaryDaughters, "num_primary_daughters/i");
     fEventTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
     fEventTree->Branch("num_showers", &fNumShowers, "num_showers/i");
@@ -191,6 +217,10 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("event", &fEvent, "event/i");
     fNueDaughtersTree->Branch("run", &fRun, "run/i");
     fNueDaughtersTree->Branch("subrun", &fSubrun, "subrun/i");
+    fNueDaughtersTree->Branch("hitsU", &fNhitsU, "hitsU/i");
+    fNueDaughtersTree->Branch("hitsV", &fNhitsV, "hitsV/i");
+    fNueDaughtersTree->Branch("hitsY", &fNhitsY, "hitsY/i");
+    fNueDaughtersTree->Branch("hitsSps", &fNhitsSpacepoints, "hitsSps/i");
     fNueDaughtersTree->Branch("generation", &fGeneration, "generation/i");
     fNueDaughtersTree->Branch("track_score", &fTrackScore, "track_score/F");
     fNueDaughtersTree->Branch("is_shower", &fIsShower, "is_shower/O");
@@ -220,6 +250,22 @@ void NueCC::clearEvent()
     fDaughtersStored = true;
     fNumShowers = 0;
     fNumTracks = 0;
+    fNu_NhitsU = 0;
+    fNu_NhitsV = 0;
+    fNu_NhitsY = 0;
+    fNu_NhitsSpacepoints = 0;
+
+    pfparticles.clear();
+    pfneutrinos.clear();
+    pfdaughters.clear();
+    particleMap.clear();
+    particlesToMetadata.clear();
+    particlesToVertices.clear();
+    particlesToClusters.clear();
+    particlesToSpacePoints.clear();
+    clustersToHits.clear();
+    hitsToSpacePoints.clear();
+    spacePointsToHits.clear();
 }
 
 void NueCC::clearDaughter()
@@ -228,6 +274,11 @@ void NueCC::clearDaughter()
     fIsTrack = false;
     fHasShowerDaughter = false;
     fIsTrackDaughter = false;
+
+    fNhitsU = 0;
+    fNhitsV = 0;
+    fNhitsY = 0;
+    fNhitsSpacepoints = 0;
 }
 
 DEFINE_ART_MODULE(NueCC)
