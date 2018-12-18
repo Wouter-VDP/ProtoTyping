@@ -15,7 +15,7 @@ Truth level information is stored of all MC particles above 100MeV, crossing or 
 Module to store the CRThit info in data and MC
 
 ## job
-Contains filelists of differenc samples and fcl file to run over them. The fcl file combine the thow analysers (CosmicStudies and CRTstudies) in one project. A set of xml files to run over MC and BNB extrenal are provided.
+Contains filelists of different samples and fcl file to run over them. The fcl file combine the two analysers (CosmicStudies and CRTstudies) in one project. A set of xml files to run over MC and BNB extrenal are provided.
 
 
 
