@@ -1,6 +1,9 @@
 # ProtoTyping UPS product
 Collection of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v07_11_00 and higher.
 
+## NueCC
+Electron neutrino selection using optical based neutrino ID and pandora consolidated reconstruction
+
 ## CosmicStudies
 This analyser stores PMT and TPC information and is used to run on CORSICA and BNBext files.
 It includes reco-truth matching for both slimmed and non-slimmed files.
