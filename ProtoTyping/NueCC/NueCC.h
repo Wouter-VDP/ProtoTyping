@@ -24,6 +24,7 @@
 #include "lardataobj/RecoBase/Vertex.h"
 #include "lardataobj/RecoBase/Track.h"
 #include "lardataobj/RecoBase/Shower.h"
+#include "lardataobj/RecoBase/PFParticleMetadata.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
@@ -52,7 +53,8 @@ class NueCC : public art::EDAnalyzer
     // Required functions.
     void analyze(art::Event const &e) override;
     void reconfigure(fhicl::ParameterSet const &p);
-    void clear();
+    void clearEvent();
+    void clearDaughter();
 
     // Extra functions.
     /**
@@ -65,10 +67,14 @@ class NueCC : public art::EDAnalyzer
     /**
      *  @brief  Fill the tree for every daughter of the neutrino candidate.
      *
-     *  @param  pfparticle The Pfparticle corresponding to the daughter.
+     *  @param  pfparticle ptr The Pfparticle corresponding to the daughter.
+     *  @param  PFParticleMap relation between id and pfparticle ptr.
+     *  @param  MetadataVector should be length one, contains metadata of the passed pfp.
      *  @return 1 if succesful, 0 if failure.
      */
-    bool FillDaughters(recob::PFParticle const &pfparticle);
+    bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
+                       const lar_pandora::PFParticleMap &particleMap,
+                       const lar_pandora::MetadataVector &metadata_vec);
 
   private:
     // Fields needed for the analyser
@@ -79,7 +85,8 @@ class NueCC : public art::EDAnalyzer
     bool m_hasMCNeutrino;
     bool m_isData;
 
-    PandoraInterfaceHelper pandoraHelper;
+    lar_pandora::LArPandoraHelper larpandora;
+    PandoraInterfaceHelper pandoraInterfaceHelper;
     lar_pandora::PFParticlesToMCParticles matchedParticles;
     std::set<art::Ptr<simb::MCParticle>> matchedMCParticles;
 
@@ -98,7 +105,10 @@ class NueCC : public art::EDAnalyzer
     float fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce;
     // Reco candidate info
     float fNu_PDG;
+    float fNu_Score;
+    uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
+    uint fNumPrimaryDaughters;
     uint fNumDaughters;
     uint fNumShowers;
     uint fNumTracks;
@@ -107,8 +117,8 @@ class NueCC : public art::EDAnalyzer
     //// Tree for every daughter
     TTree *fNueDaughtersTree;
     // Reco candidate info
-    uint fPfpId;
-    float fTrackShowerScore;
+    uint fGeneration;
+    float fTrackScore;
     bool fIsTrack;  // if the pfparticle was associated with a track
     bool fIsShower; // if the pfparticle was associated with a shower
     bool fHasShowerDaughter;
@@ -150,6 +160,7 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("event", &fEvent, "event/i");
     fEventTree->Branch("run", &fRun, "run/i");
     fEventTree->Branch("subrun", &fSubrun, "subrun/i");
+    fEventTree->Branch("num_primary_daughters", &fNumPrimaryDaughters, "num_primary_daughters/i");
     fEventTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
     fEventTree->Branch("num_showers", &fNumShowers, "num_showers/i");
     fEventTree->Branch("num_tracks", &fNumTracks, "num_tracks/i");
@@ -180,8 +191,8 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("event", &fEvent, "event/i");
     fNueDaughtersTree->Branch("run", &fRun, "run/i");
     fNueDaughtersTree->Branch("subrun", &fSubrun, "subrun/i");
-    fNueDaughtersTree->Branch("pfp_id", &fPfpId, "pfp_id/i");
-    fNueDaughtersTree->Branch("track_shower_score", &fTrackShowerScore, "track_shower_score/F");
+    fNueDaughtersTree->Branch("generation", &fGeneration, "generation/i");
+    fNueDaughtersTree->Branch("track_score", &fTrackScore, "track_score/F");
     fNueDaughtersTree->Branch("is_shower", &fIsShower, "is_shower/O");
     fNueDaughtersTree->Branch("is_track", &fIsTrack, "is_track/O");
     fNueDaughtersTree->Branch("has_shower_daughter", &fHasShowerDaughter, "has_shower_daughter/O");
@@ -203,9 +214,20 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     }
 }
 
-void NueCC::clear()
+void NueCC::clearEvent()
 {
     fNu_PDG = 0; // if 0, no neutrinocandidate was found, only look at truth information.
+    fDaughtersStored = true;
+    fNumShowers = 0;
+    fNumTracks = 0;
+}
+
+void NueCC::clearDaughter()
+{
+    fIsShower = false;
+    fIsTrack = false;
+    fHasShowerDaughter = false;
+    fIsTrackDaughter = false;
 }
 
 DEFINE_ART_MODULE(NueCC)

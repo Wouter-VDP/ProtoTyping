@@ -32,33 +32,6 @@ public:
 
   void reconfigure(fhicl::ParameterSet const &pset);
 
-  /**
-    * @brief Travers the tree of the daughters of a PFParticle
-    *
-    * @param pfparticles PFParticles handle
-    * @param top_index Index of the parent
-    * @param unordered_daugthers Vector of PFParticles daughters
-    */
-  void traversePFParticleTree(
-      const art::ValidHandle<std::vector<recob::PFParticle> > pfparticles,
-      size_t top_index, std::vector<size_t> &unordered_daugthers,
-      std::string m_pfp_producer);
-
-  /**
-     * @brief Measures the three-dimensional center of the deposited charge for a
-     * PFParticle
-     *
-     * @param ipf Index of the PFParticle
-     * @param pfparticles PFParticles handle
-     * @param evt art Event
-     * @return vector with: lowest x_sps, center in y, z, and total deposited charge on the collection plane.
-     */
-  std::vector<double> calculateChargeCenter(
-      size_t ipf,
-      const art::ValidHandle<std::vector<recob::PFParticle> > pfparticles,
-      const art::Event &evt,
-      std::string m_pfp_producer);
-
   void get_daughter_tracks(std::vector<size_t> pf_ids, const art::Event &evt,
                            std::vector<art::Ptr<recob::Track>> &tracks,
                            std::string m_pfp_producer);
@@ -119,6 +92,17 @@ public:
                           const std::string &label,
                           lar_pandora::MCTruthToMCParticles &truthToParticles,
                           lar_pandora::MCParticlesToMCTruth &particlesToTruth);
+
+  /**
+ *  @brief  Collect all downstream particles of those in the input vector
+ *
+ *  @param  pfParticleMap the mapping from PFParticle ID to PFParticle
+ *  @param  parentPFParticles the input vector of PFParticles
+ *  @param  downstreamPFParticle the output vector of PFParticles including those downstream of the input
+ */
+  void CollectDownstreamPFParticles(const lar_pandora::PFParticleMap &pfParticleMap,
+                                    const art::Ptr<recob::PFParticle> &particle,
+                                    lar_pandora::PFParticleVector &downstreamPFParticles) const;
 
 protected:
   lar_pandora::HitsToMCParticles m_hit_to_mcps_map; ///< A map from recon hits to MCParticles

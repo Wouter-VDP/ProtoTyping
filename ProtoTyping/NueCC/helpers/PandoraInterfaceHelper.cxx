@@ -413,35 +413,6 @@ void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCPa
   } // m_pfp_to_hits_map loop ends
 }
 
-void PandoraInterfaceHelper::traversePFParticleTree(
-    const art::ValidHandle<std::vector<recob::PFParticle> > pfparticles,
-    size_t top_index, std::vector<size_t> &unordered_daugthers,
-    std::string m_pfp_producer)
-{
-
-  // This is a tree-traversal algorithm.  It returns the index of the top
-  // particle, plus the index
-  // of all daughter particles.
-
-  // This is a recursive algorithm, so it needs a break clause:
-  unordered_daugthers.push_back(top_index);
-
-  if (pfparticles->at(top_index).Daughters().size() == 0)
-  {
-    return;
-  }
-
-  // Else, go through the tree:
-  for (size_t i = 0; i < pfparticles->at(top_index).Daughters().size(); i++)
-  {
-    traversePFParticleTree(pfparticles,
-                           pfparticles->at(top_index).Daughters().at(i),
-                           unordered_daugthers, m_pfp_producer);
-  }
-
-  return;
-}
-
 void PandoraInterfaceHelper::CollectMCParticles(const art::Event &evt,
                                                 const std::string &label,
                                                 lar_pandora::MCTruthToMCParticles &truthToParticles,
@@ -478,93 +449,21 @@ void PandoraInterfaceHelper::CollectMCParticles(const art::Event &evt,
   }
 }
 
-// Method to calculate the total the center for a parent particle (index of
-// neutrino pfp)
-std::vector<double> PandoraInterfaceHelper::calculateChargeCenter(
-    size_t top_particle_index,
-    const art::ValidHandle<std::vector<recob::PFParticle> > pfparticles,
-    const art::Event &evt,
-    std::string m_pfp_producer)
+void PandoraInterfaceHelper::CollectDownstreamPFParticles(const lar_pandora::PFParticleMap &pfParticleMap,
+                                                          const art::Ptr<recob::PFParticle> &particle,
+                                                          lar_pandora::PFParticleVector &downstreamPFParticles) const
 {
+  if (std::find(downstreamPFParticles.begin(), downstreamPFParticles.end(), particle) == downstreamPFParticles.end())
+    downstreamPFParticles.push_back(particle);
 
-  // First, get the indexes of pfparticles that are in the hierarchy of this
-  // particle:
-  std::vector<size_t> daughters;
-  daughters.reserve(50);
-  traversePFParticleTree(pfparticles, top_particle_index, daughters, m_pfp_producer);
-
-  // Get the associations from pfparticle to spacepoint
-  auto const &spacepoint_handle =
-      evt.getValidHandle<std::vector<recob::SpacePoint>>(m_pfp_producer);
-
-  art::FindManyP<recob::SpacePoint> spcpnts_per_pfpart(pfparticles, evt, m_pfp_producer);
-  art::FindManyP<recob::Hit> hits_per_spcpnts(spacepoint_handle, evt, m_pfp_producer);
-
-  // Variables for the total weight and center of charge
-  double totalweight = 0;
-  std::vector<double> chargecenter;
-  chargecenter.resize(3);
-  double min_x_sps_temp = 9999; //random big value that will be overwritten
-
-  // Loop over the pfparticles, get their space points, and compute the weighted
-  // average:
-
-  for (auto &m_i_pfp : daughters)
+  for (const auto &daughterId : particle->Daughters())
   {
+    const auto iter(pfParticleMap.find(daughterId));
+    if (iter == pfParticleMap.end())
+      throw cet::exception("PandoraInterfaceHelper::CollectDownstreamPFParticles") << "Scrambled PFParticle IDs" << std::endl;
 
-    // Get the associated spacepoints:
-    std::vector<art::Ptr<recob::SpacePoint>> spcpnts =
-        spcpnts_per_pfpart.at(m_i_pfp);
-
-    // Loop over the spacepoints and get the associated hits:
-    for (auto &m_sps : spcpnts)
-    {
-      auto xyz = m_sps->XYZ();
-
-      if (xyz[0] > 0 && xyz[0] < min_x_sps_temp)
-      {
-        min_x_sps_temp = xyz[0];
-      }
-
-      std::vector<art::Ptr<recob::Hit>> hits = hits_per_spcpnts.at(m_sps.key());
-      // Add the hits to the weighted average, if they are collection hits:
-      for (auto &hit : hits)
-      {
-        if (hit->View() == geo::kZ)
-        {
-          // Collection hits only
-          double weight = hit->Integral();
-          chargecenter[0] += (xyz[0]) * weight;
-          chargecenter[1] += (xyz[1]) * weight;
-          chargecenter[2] += (xyz[2]) * weight;
-          totalweight += weight;
-          // break; // Exit the loop over hits
-        } // if collection
-
-      } // hits
-
-    } // spacepoints
-
-  } // pfparticles
-
-  // Normalize;
-  chargecenter[0] /= totalweight;
-  chargecenter[1] /= totalweight;
-  chargecenter[2] /= totalweight;
-
-  // Store the data:
-  std::vector<double> m_center_of_charge(4, 0);
-  //_center_of_charge.SetX(chargecenter[0]);
-  // IMPORTANT:
-  // This function is necessary for optical selection.
-  // Flashatching is returning the extimated minimal x position,
-  // not the center. Therefore, also here teh minimum is returned and not the center.
-  m_center_of_charge[0] = chargecenter[0];
-  m_center_of_charge[1] = chargecenter[1];
-  m_center_of_charge[2] = chargecenter[2];
-  m_center_of_charge[3] = totalweight;
-
-  return m_center_of_charge;
+    this->CollectDownstreamPFParticles(pfParticleMap, iter->second, downstreamPFParticles);
+  }
 }
 
 #endif
