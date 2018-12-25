@@ -13,115 +13,6 @@ PandoraInterfaceHelper::PandoraInterfaceHelper()
   m_configured = false;
 }
 
-void PandoraInterfaceHelper::get_daughter_tracks(std::vector<size_t> pf_ids,
-                                                 const art::Event &evt,
-                                                 std::vector<art::Ptr<recob::Track>> &tracks,
-                                                 std::string m_pfp_producer)
-{
-  try
-  {
-
-    auto const &pfparticle_handle =
-        evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
-
-    art::FindOneP<recob::Track> track_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
-
-    for (auto const &pf_id : pf_ids)
-    {
-      auto const &track_obj = track_per_pfpart.at(pf_id);
-      tracks.push_back(track_obj);
-    }
-  }
-  catch (...)
-  {
-    std::cout << "[PandoraInterfaceHelper] "
-              << "Error getting daughter tracks" << std::endl;
-  }
-}
-
-// Old version of configure on non-slimmed files
-void PandoraInterfaceHelper::Configure(art::Event const &e,
-                                       std::string m_pfp_producer,
-                                       std::string m_spacepoint_producer,
-                                       std::string m_hitfinder_producer,
-                                       std::string m_geant_producer)
-{
-
-  // Collect hits
-  lar_pandora::HitVector hitVector;
-  lar_pandora::LArPandoraHelper::CollectHits(e, m_hitfinder_producer, hitVector);
-
-  // Collect PFParticles and match Reco Particles to Hits
-  lar_pandora::PFParticleVector recoParticleVector;
-  lar_pandora::PFParticleVector recoNeutrinoVector;
-  lar_pandora::PFParticlesToHits pfp_to_hits_map;
-  lar_pandora::HitsToPFParticles recoHitsToParticles;
-
-  lar_pandora::LArPandoraHelper::CollectPFParticles(e, m_pfp_producer, recoParticleVector);
-  lar_pandora::LArPandoraHelper::SelectNeutrinoPFParticles(recoParticleVector, recoNeutrinoVector);
-  lar_pandora::LArPandoraHelper::BuildPFParticleHitMaps(e,
-                                                        m_pfp_producer,
-                                                        m_spacepoint_producer,
-                                                        pfp_to_hits_map,
-                                                        recoHitsToParticles,
-                                                        lar_pandora::LArPandoraHelper::kAddDaughters,
-                                                        true); // Use clusters to go from pfp to hits
-
-  if (m_verbose)
-  {
-    std::cout << "[McPfpMatch] RecoNeutrinos: " << recoNeutrinoVector.size() << std::endl;
-    std::cout << "[McPfpMatch] RecoParticles: " << recoParticleVector.size() << std::endl;
-  }
-
-  // Collect MCParticles and match True Particles to Hits
-  lar_pandora::MCParticleVector trueParticleVector;
-  lar_pandora::MCTruthToMCParticles truthToParticles;
-  lar_pandora::MCParticlesToMCTruth particlesToTruth;
-  lar_pandora::MCParticlesToHits trueParticlesToHits;
-  lar_pandora::HitsToMCParticles hit_to_mcps_map;
-
-  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, trueParticleVector);
-  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
-  lar_pandora::LArPandoraHelper::BuildMCParticleHitMaps(e,
-                                                        m_geant_producer,
-                                                        hitVector,
-                                                        trueParticlesToHits,
-                                                        hit_to_mcps_map,
-                                                        lar_pandora::LArPandoraHelper::kAddDaughters); // Consider daughters as independent mcps
-
-  if (m_verbose)
-  {
-    std::cout << "[McPfpMatch] TrueParticles: " << particlesToTruth.size() << std::endl;
-    std::cout << "[McPfpMatch] TrueEvents: " << truthToParticles.size() << std::endl;
-  }
-
-  // Now set the things we need for the future
-  m_hit_to_mcps_map = hit_to_mcps_map;
-  m_pfp_to_hits_map = pfp_to_hits_map;
-
-  if (m_debug)
-  {
-    std::cout << "[McPfpMatch] This is event " << e.id().event() << std::endl;
-    //art::ServiceHandle<cheat::BackTracker> bt;
-    std::cout << "[McPfpMatch] Number of MCParticles matched to hits: " << trueParticlesToHits.size() << std::endl;
-    for (const auto &iter : trueParticlesToHits)
-    {
-      const art::Ptr<simb::MCTruth> mc_truth = TrackIDToMCTruth(e, m_geant_producer, (iter.first)->TrackId()); //bt->TrackIDToMCTruth((iter.first)->TrackId());
-      std::cout
-          << "[McPfpMatch] MCParticle with pdg " << (iter.first)->PdgCode()
-          << " and origin " << (mc_truth->Origin() == 1 ? "neutrino" : "cosmic")
-          << " has " << (iter.second).size() << " hits ass." << std::endl;
-      if (mc_truth->Origin() == 1)
-      {
-        lar_pandora::HitVector hits = (iter.second);
-      }
-    }
-  }
-
-  m_configured = true;
-}
-
-// New version of configure on slimmed files
 void PandoraInterfaceHelper::Configure(art::Event const &e,
                                        std::string m_pfp_producer,
                                        std::string m_spacepoint_producer,
@@ -190,8 +81,8 @@ void PandoraInterfaceHelper::Configure(art::Event const &e,
 
   if (!e.isRealData() || m_isOverlaidSample)
   {
-    CollectMCParticles(e, m_geant_producer, trueParticleVector);
-    CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, trueParticleVector);
+    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
 
     // Construct a Particle Map (trackID to MCParticle)
     lar_pandora::MCParticleMap particleMap;
@@ -272,7 +163,7 @@ art::Ptr<simb::MCTruth> PandoraInterfaceHelper::TrackIDToMCTruth(art::Event cons
 
   if (!e.isRealData() || m_isOverlaidSample)
   {
-    CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
 
     for (auto iter : particlesToTruth)
     {
@@ -286,61 +177,6 @@ art::Ptr<simb::MCTruth> PandoraInterfaceHelper::TrackIDToMCTruth(art::Event cons
   return null_ptr;
 }
 
-void PandoraInterfaceHelper::CollectMCParticles(const art::Event &evt, const std::string &label, lar_pandora::MCParticleVector &particleVector)
-{
-  if (evt.isRealData() && !m_isOverlaidSample)
-    std::cout << " PandoraCollector::CollectMCParticles --- Trying to access MC truth from real data ";
-
-  art::Handle<std::vector<simb::MCParticle>> theParticles;
-  evt.getByLabel(label, theParticles);
-  if (!theParticles.isValid())
-  {
-    std::cout << "[LArPandora]"
-              << "  Failed to find MC particles... " << std::endl;
-    return;
-  }
-  else
-  {
-    if (m_debug)
-    {
-      std::cout << "[LArPandora]"
-                << "  Found: " << theParticles->size() << " MC particles " << std::endl;
-    }
-  }
-  for (unsigned int i = 0; i < theParticles->size(); ++i)
-  {
-    const art::Ptr<simb::MCParticle> particle(theParticles, i);
-    particleVector.push_back(particle);
-  }
-}
-
-void PandoraInterfaceHelper::get_daughter_showers(
-    std::vector<size_t> pf_ids, const art::Event &evt,
-    std::vector<art::Ptr<recob::Shower>> &showers, std::string m_pfp_producer)
-{
-
-  auto const &pfparticle_handle =
-      evt.getValidHandle<std::vector<recob::PFParticle>>(m_pfp_producer);
-
-  art::FindOneP<recob::Shower> shower_per_pfpart(pfparticle_handle, evt, m_pfp_producer);
-
-  for (auto const &pf_id : pf_ids)
-  {
-    try
-    {
-
-      auto const &shower_obj = shower_per_pfpart.at(pf_id);
-      showers.push_back(shower_obj);
-    }
-    catch (...)
-    {
-      std::cout << "[PandoraLEE] "
-                << "Error getting the shower" << std::endl;
-    }
-  }
-}
-
-//___________________________________________________________________________________________________
 void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCParticles &matchedParticles)
 {
   bool m_debug = false;
@@ -413,42 +249,6 @@ void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCPa
   } // m_pfp_to_hits_map loop ends
 }
 
-void PandoraInterfaceHelper::CollectMCParticles(const art::Event &evt,
-                                                const std::string &label,
-                                                lar_pandora::MCTruthToMCParticles &truthToParticles,
-                                                lar_pandora::MCParticlesToMCTruth &particlesToTruth)
-{
-  if (evt.isRealData() && !m_isOverlaidSample)
-    std::cout << " PandoraCollector::CollectMCParticles --- Trying to access MC truth from real data ";
-
-  art::Handle<std::vector<simb::MCParticle>> theParticles;
-  evt.getByLabel(label, theParticles);
-
-  if (!theParticles.isValid())
-  {
-    std::cout << "[LArPandora]"
-              << "  Failed to find MC particles... " << std::endl;
-    return;
-  }
-  else
-  {
-    if (m_debug)
-    {
-      std::cout << "[LArPandora]"
-                << "  Found: " << theParticles->size() << " MC particles " << std::endl;
-    }
-  }
-
-  art::FindOneP<simb::MCTruth> theTruthAssns(theParticles, evt, label);
-  for (unsigned int i = 0, iEnd = theParticles->size(); i < iEnd; ++i)
-  {
-    const art::Ptr<simb::MCParticle> particle(theParticles, i);
-    const art::Ptr<simb::MCTruth> truth(theTruthAssns.at(i));
-    truthToParticles[truth].push_back(particle);
-    particlesToTruth[particle] = truth;
-  }
-}
-
 void PandoraInterfaceHelper::CollectDownstreamPFParticles(const lar_pandora::PFParticleMap &pfParticleMap,
                                                           const art::Ptr<recob::PFParticle> &particle,
                                                           lar_pandora::PFParticleVector &downstreamPFParticles) const
@@ -464,6 +264,30 @@ void PandoraInterfaceHelper::CollectDownstreamPFParticles(const lar_pandora::PFP
 
     this->CollectDownstreamPFParticles(pfParticleMap, iter->second, downstreamPFParticles);
   }
+}
+
+float PandoraInterfaceHelper::Distance3D(float x1, float y1, float z1, float x2, float y2, float z2)
+{
+  return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) + pow(z2 - z1, 2));
+}
+
+void PandoraInterfaceHelper::SCE(const float &x,
+                                 const float &y,
+                                 const float &z,
+                                 const float &time,
+                                 float &x_out, float &y_out, float &z_out)
+{
+  auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
+  auto sce_start = SCE.GetPosOffsets(geo::Point_t(x, y, z));
+
+  y_out = y + sce_start.Y();
+  z_out = z + sce_start.Z();
+
+  auto const &detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>();
+  auto const &detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
+  float g4Ticks = detClocks->TPCG4Time2Tick(time) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
+  float xtimeoffset = detProperties->ConvertTicksToX(g4Ticks, 0, 0, 0);
+  x_out = (x + xtimeoffset + sce_start.X()) * (1.114 / 1.098) + 0.6;
 }
 
 #endif

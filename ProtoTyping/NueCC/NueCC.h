@@ -58,6 +58,14 @@ class NueCC : public art::EDAnalyzer
     void clearEvent();
     void clearDaughter();
 
+
+    /**
+     *  @brief  Collect and fill the reco-truth matching information.
+     *
+     *  @param  e Art event
+     */
+    void FillReconTruthMatching(art::Event const &e);
+
     /**
      *  @brief  Collect and fill the reconstructed information.
      *
@@ -66,11 +74,18 @@ class NueCC : public art::EDAnalyzer
     void FillReconstructed(art::Event const &e);
 
     /**
-     *  @brief  Collect and fill the MC based information.
+     *  @brief  Collect and fill the MC based neutrino information.
      *
      *  @param  e Art event
      */
-    void FillTruth(art::Event const &e);
+    void FillTrueNu(art::Event const &e);
+
+    /**
+     *  @brief  Collect and fill the MC neutrino daughter information.
+     *
+     *  @param  e Art event
+     */
+    void FillTrueNuDaughters(art::Event const &e);
 
     /**
      *  @brief  Fill the tree for every daughter of the neutrino candidate.
@@ -79,6 +94,14 @@ class NueCC : public art::EDAnalyzer
      *  @return 1 if succesful, 0 if failure.
      */
     bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp);
+
+    /**
+     *  @brief  Fill the information about the matching of the reconstructed daughter
+     *
+     *  @param  pfparticle ptr The Pfparticle corresponding to the daughter.
+     *  @return 1 if succesfully matched, 0 if not matched.
+     */
+    bool MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp);
 
   private:
     // Fields needed for the analyser
@@ -111,6 +134,7 @@ class NueCC : public art::EDAnalyzer
     //// Tree for every event
     TTree *fEventTree;
     uint fRun, fSubrun, fEvent;
+    uint fNumPfp;
     // MC neutrino info
     uint fNumNu; // number of MC neutrinos in event, only one gets saved!
     int fTrueNu_InteractionType;
@@ -118,21 +142,29 @@ class NueCC : public art::EDAnalyzer
     int fTrueNu_PDG;
     float fTrueNu_Energy;
     float fTrueNu_LeptonEnergy;
+    float fTrueNu_LeptonTheta;
     float fTrueNu_Time; // time of the true neutrino interaction
     float fTrueNu_Vx, fTrueNu_Vy, fTrueNu_Vz;
     float fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce;
+    float fTrueNu_VtxDistance;
+    // MC neutrino daughter
+    std::vector<int> fTrueNu_DaughterPDG;
+    std::vector<float> fTrueNu_DaughterE;
+    std::vector<bool> fTrueNu_DaughterMatched;
     // Reco candidate info
     float fNu_PDG;
     float fNu_Score;
     uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
     uint fNu_NhitsU, fNu_NhitsV, fNu_NhitsY;
-    uint fNu_NhitsSpacepoints;
+    uint fNu_NSpacepoints;
     uint fNumPrimaryDaughters;
     uint fNumDaughters;
+    uint fNumMatchedDaughters;
     uint fNumShowers;
     uint fNumTracks;
     bool fDaughtersStored; // if all the neutrino daughters were stored correctly
+    bool fCosmicMatched; // One of the daughters is not matched to neutrino origin
 
     //// Tree for every daughter
     TTree *fNueDaughtersTree;
@@ -144,9 +176,11 @@ class NueCC : public art::EDAnalyzer
     bool fHasShowerDaughter;
     bool fIsTrackDaughter;
     float fVx, fVy, fVz;
+    float fVtxDistance;
     uint fNhitsU, fNhitsV, fNhitsY;
-    uint fNhitsSpacepoints;
+    uint fNSpacepoints;
     // Matched MCParticle info
+    bool fMatchedNeutrino;
     int fTruePDG;
     float fTrueEnergy;
     float fTrueVx, fTrueVy, fTrueVz;
@@ -182,10 +216,11 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("event", &fEvent, "event/i");
     fEventTree->Branch("run", &fRun, "run/i");
     fEventTree->Branch("subrun", &fSubrun, "subrun/i");
+    fEventTree->Branch("numpfp", &fNumPfp, "numpfp/i");
     fEventTree->Branch("hitsU", &fNu_NhitsU, "hitsU/i");
     fEventTree->Branch("hitsV", &fNu_NhitsV, "hitsV/i");
     fEventTree->Branch("hitsY", &fNu_NhitsY, "hitsY/i");
-    fEventTree->Branch("hitsSps", &fNu_NhitsSpacepoints, "hitsSps/i");
+    fEventTree->Branch("hitsSps", &fNu_NSpacepoints, "hitsSps/i");
     fEventTree->Branch("num_primary_daughters", &fNumPrimaryDaughters, "num_primary_daughters/i");
     fEventTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
     fEventTree->Branch("num_showers", &fNumShowers, "num_showers/i");
@@ -206,10 +241,18 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
         fEventTree->Branch("mc_nu_vz_sce", &fTrueNu_VzSce, "mc_nu_vz_sce/F");
         fEventTree->Branch("mc_nu_energy", &fTrueNu_Energy, "mc_nu_energy/F");
         fEventTree->Branch("mc_nu_lepton_energy", &fTrueNu_LeptonEnergy, "mc_nu_lepton_energy/F");
+        fEventTree->Branch("mc_nu_lepton_theta", &fTrueNu_LeptonTheta, "mc_nu_lepton_theta/F");
         fEventTree->Branch("mc_nu_time", &fTrueNu_Time, "mc_nu_time/F");
         fEventTree->Branch("mc_nu_pdg", &fTrueNu_PDG, "mc_nu_pdg/I");
         fEventTree->Branch("mc_nu_interaction_type", &fTrueNu_InteractionType, "mc_nu_interaction_type/I");
         fEventTree->Branch("mc_nu_ccnc", &fTrueNu_CCNC, "mc_nu_ccnc/O");
+        fEventTree->Branch("mc_nu_vtx_distance", &fTrueNu_VtxDistance, "mc_nu_vtx_distance/F");
+        fEventTree->Branch("num_matched_daughters", &fNumMatchedDaughters, "num_matched_daughters/i");
+        fEventTree->Branch("daughters_stored", &fCosmicMatched, "daughters_stored/O");
+
+        fEventTree->Branch("mc_nu_daughter_matched", "std::vector< bool >", &fTrueNu_DaughterMatched);
+        fEventTree->Branch("mc_nu_daughter_pdg", "std::vector< int >", &fTrueNu_DaughterPDG);
+        fEventTree->Branch("mc_nu_daughter_energy", "std::vector< float >", &fTrueNu_DaughterE);
     }
 
     //// Tree for every daughter
@@ -217,10 +260,11 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("event", &fEvent, "event/i");
     fNueDaughtersTree->Branch("run", &fRun, "run/i");
     fNueDaughtersTree->Branch("subrun", &fSubrun, "subrun/i");
+    fNueDaughtersTree->Branch("numpfp", &fNumPfp, "numpfp/i");
     fNueDaughtersTree->Branch("hitsU", &fNhitsU, "hitsU/i");
     fNueDaughtersTree->Branch("hitsV", &fNhitsV, "hitsV/i");
     fNueDaughtersTree->Branch("hitsY", &fNhitsY, "hitsY/i");
-    fNueDaughtersTree->Branch("hitsSps", &fNhitsSpacepoints, "hitsSps/i");
+    fNueDaughtersTree->Branch("hitsSps", &fNSpacepoints, "hitsSps/i");
     fNueDaughtersTree->Branch("generation", &fGeneration, "generation/i");
     fNueDaughtersTree->Branch("track_score", &fTrackScore, "track_score/F");
     fNueDaughtersTree->Branch("is_shower", &fIsShower, "is_shower/O");
@@ -230,9 +274,9 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("vx", &fVx, "vx/F");
     fNueDaughtersTree->Branch("vy", &fVy, "vy/F");
     fNueDaughtersTree->Branch("vz", &fVz, "vz/F");
-
-    if (m_hasMCNeutrino && !m_isData)
+    if (!m_isData)
     {
+        fNueDaughtersTree->Branch("mc_neutrino", &fMatchedNeutrino, "mc_neutrino/F");
         fNueDaughtersTree->Branch("mc_vx", &fTrueVx, "mc_vx/F");
         fNueDaughtersTree->Branch("mc_vy", &fTrueVy, "mc_vy/F");
         fNueDaughtersTree->Branch("mc_vz", &fTrueVz, "mc_vz/F");
@@ -248,12 +292,19 @@ void NueCC::clearEvent()
 {
     fNu_PDG = 0; // if 0, no neutrinocandidate was found, only look at truth information.
     fDaughtersStored = true;
+    fCosmicMatched = false;
+    fNumMatchedDaughters = 0;
     fNumShowers = 0;
     fNumTracks = 0;
     fNu_NhitsU = 0;
     fNu_NhitsV = 0;
     fNu_NhitsY = 0;
-    fNu_NhitsSpacepoints = 0;
+    fNu_NSpacepoints = 0;
+    fNumNu = 0;
+
+    fTrueNu_DaughterPDG.clear();
+    fTrueNu_DaughterE.clear();
+    fTrueNu_DaughterMatched.clear();
 
     pfparticles.clear();
     pfneutrinos.clear();
@@ -266,6 +317,9 @@ void NueCC::clearEvent()
     clustersToHits.clear();
     hitsToSpacePoints.clear();
     spacePointsToHits.clear();
+
+    matchedParticles.clear();
+    matchedMCParticles.clear();
 }
 
 void NueCC::clearDaughter()
@@ -278,7 +332,7 @@ void NueCC::clearDaughter()
     fNhitsU = 0;
     fNhitsV = 0;
     fNhitsY = 0;
-    fNhitsSpacepoints = 0;
+    fNSpacepoints = 0;
 }
 
 DEFINE_ART_MODULE(NueCC)

@@ -14,6 +14,11 @@
 #include "nusimdata/SimulationBase/MCTruth.h"
 #include "lardataobj/AnalysisBase/BackTrackerMatchingData.h"
 
+#include "larevt/SpaceChargeServices/SpaceChargeService.h"
+#include "lardata/DetectorInfoServices/DetectorPropertiesService.h"
+#include "lardata/DetectorInfoServices/DetectorClocksServiceStandard.h"
+#include <math.h>
+
 namespace lar_pandora
 {
 typedef std::map<art::Ptr<recob::PFParticle>, art::Ptr<simb::MCParticle>> PFParticlesToMCParticles;
@@ -31,14 +36,6 @@ public:
   ~PandoraInterfaceHelper() = default;
 
   void reconfigure(fhicl::ParameterSet const &pset);
-
-  void get_daughter_tracks(std::vector<size_t> pf_ids, const art::Event &evt,
-                           std::vector<art::Ptr<recob::Track>> &tracks,
-                           std::string m_pfp_producer);
-
-  void get_daughter_showers(std::vector<size_t> pf_ids, const art::Event &evt,
-                            std::vector<art::Ptr<recob::Shower>> &showers,
-                            std::string m_pfp_producer);
 
   /**
     *  @brief Returns matching between true and reconstructed particles
@@ -63,35 +60,7 @@ public:
                  std::string m_geant_producer,
                  std::string m_hit_mcp_producer);
 
-  void Configure(art::Event const &e,
-                 std::string m_pfp_producer,
-                 std::string m_spacepoint_producer,
-                 std::string m_hitfinder_producer,
-                 std::string m_geant_producer);
-
   art::Ptr<simb::MCTruth> TrackIDToMCTruth(art::Event const &e, std::string _geant_producer, int geant_track_id);
-  /**
-     *  @brief Collect a vector of MCParticle objects from the ART event record
-     *
-     *  @param evt the ART event record
-     *  @param label the label for the truth information in the event
-     *  @param particleVector the output vector of MCParticle objects
-     */
-  void CollectMCParticles(const art::Event &evt,
-                          const std::string &label,
-                          lar_pandora::MCParticleVector &particleVector);
-  /**
-     *  @brief Collect truth information from the ART event record
-     *
-     *  @param evt the ART event record
-     *  @param label the label for the truth information in the event
-     *  @param truthToParticles output map from MCTruth to MCParticle objects
-     *  @param particlesToTruth output map from MCParticle to MCTruth objects
-     */
-  void CollectMCParticles(const art::Event &evt,
-                          const std::string &label,
-                          lar_pandora::MCTruthToMCParticles &truthToParticles,
-                          lar_pandora::MCParticlesToMCTruth &particlesToTruth);
 
   /**
  *  @brief  Collect all downstream particles of those in the input vector
@@ -103,6 +72,21 @@ public:
   void CollectDownstreamPFParticles(const lar_pandora::PFParticleMap &pfParticleMap,
                                     const art::Ptr<recob::PFParticle> &particle,
                                     lar_pandora::PFParticleVector &downstreamPFParticles) const;
+
+  /**
+ *  @brief  Distance between 2 point in 3D
+ *  @return  distance 
+ */
+  float Distance3D(float x1, float y1, float z1, float x2, float y2, float z2);
+
+/**
+ *  @brief  Applies SCE on a point (MCC9)
+ */
+  void SCE(const float &x, 
+            const float &y, 
+            const float &z, 
+            const float &time, 
+            float &x_out, float &y_out, float &z_out);
 
 protected:
   lar_pandora::HitsToMCParticles m_hit_to_mcps_map; ///< A map from recon hits to MCParticles
