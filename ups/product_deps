@@ -6,8 +6,8 @@ defaultqual e17
 fcldir product_dir job
 #
 product         version
-larsoft		       v07_10_00
-cetbuildtools	   v7_04_00	-	only_for_build
+larsoft		       v08_02_00
+cetbuildtools	   v7_06_03	-	only_for_build
 
 end_product_list
 
