@@ -152,7 +152,7 @@ class NueCC : public art::EDAnalyzer
     std::vector<float> fTrueNu_DaughterE;
     std::vector<bool> fTrueNu_DaughterMatched;
     // Reco candidate info
-    float fNu_PDG;
+    int fNu_PDG;
     float fNu_Score;
     uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
@@ -248,7 +248,7 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
         fEventTree->Branch("mc_nu_ccnc", &fTrueNu_CCNC, "mc_nu_ccnc/O");
         fEventTree->Branch("mc_nu_vtx_distance", &fTrueNu_VtxDistance, "mc_nu_vtx_distance/F");
         fEventTree->Branch("num_matched_daughters", &fNumMatchedDaughters, "num_matched_daughters/i");
-        fEventTree->Branch("daughters_stored", &fCosmicMatched, "daughters_stored/O");
+        fEventTree->Branch("cosmic_matched", &fCosmicMatched, "cosmic_matched/O");
 
         fEventTree->Branch("mc_nu_daughter_matched", "std::vector< bool >", &fTrueNu_DaughterMatched);
         fEventTree->Branch("mc_nu_daughter_pdg", "std::vector< int >", &fTrueNu_DaughterPDG);
