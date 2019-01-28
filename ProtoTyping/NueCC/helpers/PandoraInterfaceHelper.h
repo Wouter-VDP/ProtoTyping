@@ -35,8 +35,6 @@ public:
   PandoraInterfaceHelper();
   ~PandoraInterfaceHelper() = default;
 
-  void reconfigure(fhicl::ParameterSet const &pset);
-
   /**
     *  @brief Returns matching between true and reconstructed particles
     *
@@ -93,7 +91,6 @@ protected:
   lar_pandora::PFParticlesToHits m_pfp_to_hits_map; ///< A map from PFParticles to recon hits
 private:
   bool m_configured = false;
-  bool m_isOverlaidSample = false;
   bool m_debug = false;
   bool m_verbose = false;
 };

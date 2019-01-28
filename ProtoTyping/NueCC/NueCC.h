@@ -119,10 +119,14 @@ class NueCC : public art::EDAnalyzer
     lar_pandora::PFParticleVector pfparticles;
     lar_pandora::PFParticleVector pfneutrinos;
     lar_pandora::PFParticleVector pfdaughters;
+    lar_pandora::ShowerVector pfshowers;
+    lar_pandora::TrackVector pftracks;
     lar_pandora::PFParticleMap particleMap;
     lar_pandora::PFParticlesToMetadata particlesToMetadata;
     lar_pandora::PFParticlesToVertices particlesToVertices;
     lar_pandora::PFParticlesToClusters particlesToClusters;
+    lar_pandora::PFParticlesToShowers particlesToShowers;
+    lar_pandora::PFParticlesToTracks particlesToTracks;
     lar_pandora::PFParticlesToSpacePoints particlesToSpacePoints;
     lar_pandora::ClustersToHits clustersToHits;
     lar_pandora::HitsToSpacePoints hitsToSpacePoints;
@@ -134,6 +138,7 @@ class NueCC : public art::EDAnalyzer
     //// Tree for every event
     TTree *fEventTree;
     uint fRun, fSubrun, fEvent;
+    UInt_t fTimeHigh, fTimeLow;
     uint fNumPfp;
     // MC neutrino info
     uint fNumNu; // number of MC neutrinos in event, only one gets saved!
@@ -216,6 +221,8 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("event", &fEvent, "event/i");
     fEventTree->Branch("run", &fRun, "run/i");
     fEventTree->Branch("subrun", &fSubrun, "subrun/i");
+    fEventTree->Branch("evt_time_sec", &fTimeHigh, "evt_time_sec/i");
+    fEventTree->Branch("evt_time_nsec", &fTimeLow, "evt_time_nsec/i");
     fEventTree->Branch("numpfp", &fNumPfp, "numpfp/i");
     fEventTree->Branch("hitsU", &fNu_NhitsU, "hitsU/i");
     fEventTree->Branch("hitsV", &fNu_NhitsV, "hitsV/i");
@@ -260,7 +267,8 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("event", &fEvent, "event/i");
     fNueDaughtersTree->Branch("run", &fRun, "run/i");
     fNueDaughtersTree->Branch("subrun", &fSubrun, "subrun/i");
-    fNueDaughtersTree->Branch("numpfp", &fNumPfp, "numpfp/i");
+    fNueDaughtersTree->Branch("evt_time_sec", &fTimeHigh, "evt_time_sec/i");
+    fNueDaughtersTree->Branch("evt_time_nsec", &fTimeLow, "evt_time_nsec/i");
     fNueDaughtersTree->Branch("hitsU", &fNhitsU, "hitsU/i");
     fNueDaughtersTree->Branch("hitsV", &fNhitsV, "hitsV/i");
     fNueDaughtersTree->Branch("hitsY", &fNhitsY, "hitsY/i");
@@ -274,9 +282,11 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("vx", &fVx, "vx/F");
     fNueDaughtersTree->Branch("vy", &fVy, "vy/F");
     fNueDaughtersTree->Branch("vz", &fVz, "vz/F");
+    fNueDaughtersTree->Branch("vtx_distance", &fVtxDistance, "vtx_distance/F");
+    
     if (!m_isData)
     {
-        fNueDaughtersTree->Branch("mc_neutrino", &fMatchedNeutrino, "mc_neutrino/F");
+        fNueDaughtersTree->Branch("mc_neutrino", &fMatchedNeutrino, "mc_neutrino/O");
         fNueDaughtersTree->Branch("mc_vx", &fTrueVx, "mc_vx/F");
         fNueDaughtersTree->Branch("mc_vy", &fTrueVy, "mc_vy/F");
         fNueDaughtersTree->Branch("mc_vz", &fTrueVz, "mc_vz/F");
@@ -284,7 +294,7 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
         fNueDaughtersTree->Branch("mc_vy_sce", &fTrueVySce, "mc_vy_sce/F");
         fNueDaughtersTree->Branch("mc_vz_sce", &fTrueVzSce, "mc_vz_sce/F");
         fNueDaughtersTree->Branch("mc_energy", &fTrueEnergy, "mc_energy/F");
-        fNueDaughtersTree->Branch("mc_pdg", &fTrueNu_PDG, "mc_pdg/I");
+        fNueDaughtersTree->Branch("mc_pdg", &fTruePDG, "mc_pdg/I");
     }
 }
 
@@ -309,11 +319,15 @@ void NueCC::clearEvent()
     pfparticles.clear();
     pfneutrinos.clear();
     pfdaughters.clear();
+    pfshowers.clear();
+    pftracks.clear();
     particleMap.clear();
     particlesToMetadata.clear();
     particlesToVertices.clear();
     particlesToClusters.clear();
     particlesToSpacePoints.clear();
+    particlesToShowers.clear();
+    particlesToTracks.clear();
     clustersToHits.clear();
     hitsToSpacePoints.clear();
     spacePointsToHits.clear();

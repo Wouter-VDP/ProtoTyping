@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "necc_nue_mcc9_nov">
+<!ENTITY name "necc_nue_mcc9_jan">
 <!ENTITY version "v08_02_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "prodgenie_intrinsic_nue_cosmics_mcc9.0_nov_fullmc_reco2_slim">
+<!ENTITY dataset "prodgenie_bnb_intrinsic_nue_uboone_overlay_mcc9.0_jan_reco2_slim">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>50000</numevents>
+    <numevents>25077</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -23,19 +23,19 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Uboonecode/version8/srcs/ProtoTyping/ProtoTyping/NueCC/job/</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_9Jan.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_11Jan.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
     <stage name="nuecc">
-        <fcl>run_nuecc_analyser_MC.fcl</fcl>
+        <fcl>run_nuecc_analyser_overlay.fcl</fcl>
         
         <outdir>/pnfs/uboone/resilient/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>250</numjobs>
+        <numjobs>27</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>10</maxfilesperjob>

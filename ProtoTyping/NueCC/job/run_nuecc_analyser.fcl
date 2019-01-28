@@ -73,8 +73,11 @@ services.DetectorClocksService.TriggerOffsetTPC:             -0.400e3
 services.DetectorClocksService.TrigModuleName:               "daq"
 
 physics.producers.pandoraAllOutcomesTrack.PFParticleLabel:  "pandoraPatRec:allOutcomes"
+physics.producers.pandoraAllOutcomesTrack.UseAllParticles: true
 physics.producers.pandoraAllOutcomesShower.PFParticleLabel: "pandoraPatRec:allOutcomes"
+physics.producers.pandoraAllOutcomesShower.UseAllParticles: true
 physics.producers.pandoraFlashEventBuilding.ShouldUseTestBeamMode: false
+
 
 outputs:
 {

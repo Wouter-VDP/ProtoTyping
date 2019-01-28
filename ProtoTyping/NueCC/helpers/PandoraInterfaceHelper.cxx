@@ -3,11 +3,6 @@
 
 #include "PandoraInterfaceHelper.h"
 
-void PandoraInterfaceHelper::reconfigure(fhicl::ParameterSet const &pset)
-{
-  m_isOverlaidSample = pset.get<bool>("isOverlaidSample", false);
-}
-
 PandoraInterfaceHelper::PandoraInterfaceHelper()
 {
   m_configured = false;
@@ -79,69 +74,66 @@ void PandoraInterfaceHelper::Configure(art::Event const &e,
   lar_pandora::MCParticlesToHits trueParticlesToHits;
   lar_pandora::HitsToMCParticles hit_to_mcps_map;
 
-  if (!e.isRealData() || m_isOverlaidSample)
+  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, trueParticleVector);
+  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+
+  // Construct a Particle Map (trackID to MCParticle)
+  lar_pandora::MCParticleMap particleMap;
+
+  for (lar_pandora::MCTruthToMCParticles::const_iterator iter1 = truthToParticles.begin(), iterEnd1 = truthToParticles.end(); iter1 != iterEnd1; ++iter1)
   {
-    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, trueParticleVector);
-    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
-
-    // Construct a Particle Map (trackID to MCParticle)
-    lar_pandora::MCParticleMap particleMap;
-
-    for (lar_pandora::MCTruthToMCParticles::const_iterator iter1 = truthToParticles.begin(), iterEnd1 = truthToParticles.end(); iter1 != iterEnd1; ++iter1)
+    const lar_pandora::MCParticleVector &particleVector = iter1->second;
+    for (lar_pandora::MCParticleVector::const_iterator iter2 = particleVector.begin(), iterEnd2 = particleVector.end(); iter2 != iterEnd2; ++iter2)
     {
-      const lar_pandora::MCParticleVector &particleVector = iter1->second;
-      for (lar_pandora::MCParticleVector::const_iterator iter2 = particleVector.begin(), iterEnd2 = particleVector.end(); iter2 != iterEnd2; ++iter2)
+      const art::Ptr<simb::MCParticle> particle = *iter2;
+      particleMap[particle->TrackId()] = particle;
+    }
+  }
+
+  // Loop over the hits, get the ass MCP, and then tru to link
+
+  std::vector<art::Ptr<simb::MCParticle>> mcp_v;
+  std::vector<anab::BackTrackerHitMatchingData const *> match_v;
+  for (auto hit : hitVector)
+  {
+
+    mcp_v.clear();
+    match_v.clear();
+    mcps_from_hit.get(hit.key(), mcp_v, match_v);
+
+    double max_energy = -1;
+    int best_match_id = -1;
+    for (size_t m = 0; m < match_v.size(); m++)
+    {
+      double this_energy = match_v[m]->energy;
+      if (this_energy > max_energy)
       {
-        const art::Ptr<simb::MCParticle> particle = *iter2;
-        particleMap[particle->TrackId()] = particle;
+        best_match_id = m;
+        max_energy = this_energy;
       }
     }
 
-    // Loop over the hits, get the ass MCP, and then tru to link
-
-    std::vector<art::Ptr<simb::MCParticle>> mcp_v;
-    std::vector<anab::BackTrackerHitMatchingData const *> match_v;
-    for (auto hit : hitVector)
+    if (best_match_id > -1)
     {
-
-      mcp_v.clear();
-      match_v.clear();
-      mcps_from_hit.get(hit.key(), mcp_v, match_v);
-
-      double max_energy = -1;
-      int best_match_id = -1;
-      for (size_t m = 0; m < match_v.size(); m++)
+      try
       {
-        double this_energy = match_v[m]->energy;
-        if (this_energy > max_energy)
-        {
-          best_match_id = m;
-          max_energy = this_energy;
-        }
-      }
+        const art::Ptr<simb::MCParticle> thisParticle = mcp_v.at(best_match_id);
+        const art::Ptr<simb::MCParticle> primaryParticle(lar_pandora::LArPandoraHelper::GetFinalStateMCParticle(particleMap, thisParticle));
+        const art::Ptr<simb::MCParticle> selectedParticle((lar_pandora::LArPandoraHelper::kAddDaughters == daughterMode) ? primaryParticle : thisParticle);
 
-      if (best_match_id > -1)
-      {
-        try
-        {
-          const art::Ptr<simb::MCParticle> thisParticle = mcp_v.at(best_match_id);
-          const art::Ptr<simb::MCParticle> primaryParticle(lar_pandora::LArPandoraHelper::GetFinalStateMCParticle(particleMap, thisParticle));
-          const art::Ptr<simb::MCParticle> selectedParticle((lar_pandora::LArPandoraHelper::kAddDaughters == daughterMode) ? primaryParticle : thisParticle);
-
-          if ((lar_pandora::LArPandoraHelper::kIgnoreDaughters == daughterMode) && (selectedParticle != primaryParticle))
-            continue;
-
-          if (!(lar_pandora::LArPandoraHelper::IsVisible(selectedParticle)))
-            continue;
-
-          hit_to_mcps_map[hit] = selectedParticle;
-        }
-        catch (...)
-        {
-          std::cout << "[PandoraInterfaceHelper] "
-                    << "Error in the loop of the hits" << std::endl;
+        if ((lar_pandora::LArPandoraHelper::kIgnoreDaughters == daughterMode) && (selectedParticle != primaryParticle))
           continue;
-        }
+
+        if (!(lar_pandora::LArPandoraHelper::IsVisible(selectedParticle)))
+          continue;
+
+        hit_to_mcps_map[hit] = selectedParticle;
+      }
+      catch (...)
+      {
+        std::cout << "[PandoraInterfaceHelper] "
+                  << "Error in the loop of the hits" << std::endl;
+        continue;
       }
     }
   }
@@ -161,16 +153,13 @@ art::Ptr<simb::MCTruth> PandoraInterfaceHelper::TrackIDToMCTruth(art::Event cons
   lar_pandora::MCTruthToMCParticles truthToParticles;
   lar_pandora::MCParticlesToMCTruth particlesToTruth;
 
-  if (!e.isRealData() || m_isOverlaidSample)
-  {
-    lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
+  lar_pandora::LArPandoraHelper::CollectMCParticles(e, m_geant_producer, truthToParticles, particlesToTruth);
 
-    for (auto iter : particlesToTruth)
+  for (auto iter : particlesToTruth)
+  {
+    if (iter.first->TrackId() == geant_track_id)
     {
-      if (iter.first->TrackId() == geant_track_id)
-      {
-        return iter.second;
-      }
+      return iter.second;
     }
   }
   art::Ptr<simb::MCTruth> null_ptr;
@@ -285,6 +274,7 @@ void PandoraInterfaceHelper::SCE(const float &x,
 
   auto const &detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>();
   auto const &detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
+  // This line does not work well for overlay samples
   float g4Ticks = detClocks->TPCG4Time2Tick(time) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
   float xtimeoffset = detProperties->ConvertTicksToX(g4Ticks, 0, 0, 0);
   x_out = (x + xtimeoffset + sce_start.X()) * (1.114 / 1.098) + 0.6;
