@@ -7,7 +7,6 @@ art_make(
                         larcorealg_Geometry
                         larcore_Geometry_Geometry_service
                         larsim_Simulation lardataobj_Simulation
-                        lardataobj_RawData
                         lardataobj_RecoBase
                         lardataobj_AnalysisBase
                         lardata_Utilities
@@ -28,8 +27,6 @@ art_make(
 			            cetlib cetlib_except
                         ${Boost_SYSTEM_LIBRARY}
                         ${ROOT_BASIC_LIB_LIST}
-          # Needed for the main module          
-          MODULE_LIBRARIES
           )
           
 install_headers()

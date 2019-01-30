@@ -34,6 +34,7 @@
 #include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
 
 #include "helpers/PandoraInterfaceHelper.h"
+#include "helpers/EnergyHelper.h"
 
 #include "TTree.h"
 
@@ -57,7 +58,6 @@ class NueCC : public art::EDAnalyzer
     void reconfigure(fhicl::ParameterSet const &p);
     void clearEvent();
     void clearDaughter();
-
 
     /**
      *  @brief  Collect and fill the reco-truth matching information.
@@ -113,6 +113,7 @@ class NueCC : public art::EDAnalyzer
     bool m_isData;
 
     PandoraInterfaceHelper pandoraInterfaceHelper;
+    EnergyHelper energyHelper;
 
     // LAr Pandora Helper fields
     lar_pandora::LArPandoraHelper larpandora;
@@ -162,6 +163,7 @@ class NueCC : public art::EDAnalyzer
     uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
     uint fNu_NhitsU, fNu_NhitsV, fNu_NhitsY;
+    float fNu_CaloU, fNu_CaloV, fNu_CaloY;
     uint fNu_NSpacepoints;
     uint fNumPrimaryDaughters;
     uint fNumDaughters;
@@ -169,7 +171,7 @@ class NueCC : public art::EDAnalyzer
     uint fNumShowers;
     uint fNumTracks;
     bool fDaughtersStored; // if all the neutrino daughters were stored correctly
-    bool fCosmicMatched; // One of the daughters is not matched to neutrino origin
+    bool fCosmicMatched;   // One of the daughters is not matched to neutrino origin
 
     //// Tree for every daughter
     TTree *fNueDaughtersTree;
@@ -183,7 +185,31 @@ class NueCC : public art::EDAnalyzer
     float fVx, fVy, fVz;
     float fVtxDistance;
     uint fNhitsU, fNhitsV, fNhitsY;
+    float fCaloU, fCaloV, fCaloY;
     uint fNSpacepoints;
+    // Track info
+    float fTrackLength;
+    float fTrackDirX;
+    float fTrackDirY;
+    float fTrackDirZ;
+    float fTrackEndX;
+    float fTrackEndY;
+    float fTrackEndZ;
+    // Shower info
+    float fShowerLength;
+    float fShowerOpenAngle;
+    float fShowerDirX;
+    float fShowerDirY;
+    float fShowerDirZ;
+    float fDedxU;
+    float fDedxV;
+    float fDedxY;
+    uint fDedxHitsU;
+    uint fDedxHitsV;
+    uint fDedxHitsY;
+    float fDedxPitchU;
+    float fDedxPitchV;
+    float fDedxPitchY;
     // Matched MCParticle info
     bool fMatchedNeutrino;
     int fTruePDG;
@@ -201,6 +227,8 @@ void NueCC::reconfigure(fhicl::ParameterSet const &p)
 
     m_isData = p.get<bool>("is_data", false);
     m_hasMCNeutrino = p.get<bool>("has_MC_neutrino", false);
+
+    energyHelper.reconfigure(p);
 }
 
 NueCC::NueCC(fhicl::ParameterSet const &p)
@@ -227,6 +255,9 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("hitsU", &fNu_NhitsU, "hitsU/i");
     fEventTree->Branch("hitsV", &fNu_NhitsV, "hitsV/i");
     fEventTree->Branch("hitsY", &fNu_NhitsY, "hitsY/i");
+    fEventTree->Branch("caloU", &fNu_CaloU, "caloU/F");
+    fEventTree->Branch("caloV", &fNu_CaloV, "caloV/F");
+    fEventTree->Branch("caloY", &fNu_CaloY, "caloY/F");
     fEventTree->Branch("hitsSps", &fNu_NSpacepoints, "hitsSps/i");
     fEventTree->Branch("num_primary_daughters", &fNumPrimaryDaughters, "num_primary_daughters/i");
     fEventTree->Branch("num_daughters", &fNumDaughters, "num_daughters/i");
@@ -272,6 +303,9 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("hitsU", &fNhitsU, "hitsU/i");
     fNueDaughtersTree->Branch("hitsV", &fNhitsV, "hitsV/i");
     fNueDaughtersTree->Branch("hitsY", &fNhitsY, "hitsY/i");
+    fNueDaughtersTree->Branch("caloU", &fCaloU, "caloU/F");
+    fNueDaughtersTree->Branch("caloV", &fCaloV, "caloV/F");
+    fNueDaughtersTree->Branch("caloY", &fCaloY, "caloY/F");
     fNueDaughtersTree->Branch("hitsSps", &fNSpacepoints, "hitsSps/i");
     fNueDaughtersTree->Branch("generation", &fGeneration, "generation/i");
     fNueDaughtersTree->Branch("track_score", &fTrackScore, "track_score/F");
@@ -283,7 +317,29 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("vy", &fVy, "vy/F");
     fNueDaughtersTree->Branch("vz", &fVz, "vz/F");
     fNueDaughtersTree->Branch("vtx_distance", &fVtxDistance, "vtx_distance/F");
-    
+
+    fNueDaughtersTree->Branch("track_length", &fTrackLength, "track_length/F");
+    fNueDaughtersTree->Branch("track_endx", &fTrackEndX, "track_endx/F");
+    fNueDaughtersTree->Branch("track_endy", &fTrackEndY, "track_endy/F");
+    fNueDaughtersTree->Branch("track_endz", &fTrackEndZ, "track_endz/F");
+    fNueDaughtersTree->Branch("track_dirx", &fTrackDirX, "track_dirx/F");
+    fNueDaughtersTree->Branch("track_diry", &fTrackDirY, "track_diry/F");
+    fNueDaughtersTree->Branch("track_dirz", &fTrackDirZ, "track_dirz/F");
+    fNueDaughtersTree->Branch("shower_length", &fShowerLength, "shower_length/F");
+    fNueDaughtersTree->Branch("shower_openangle", &fShowerOpenAngle, "shower_openangle/F");
+    fNueDaughtersTree->Branch("shower_dirx", &fShowerDirX, "shower_dirx/F");
+    fNueDaughtersTree->Branch("shower_diry", &fShowerDirY, "shower_diry/F");
+    fNueDaughtersTree->Branch("shower_dirz", &fShowerDirZ, "shower_dirz/F");
+    fNueDaughtersTree->Branch("start_dedxU", &fDedxU, "start_dedxU/F");
+    fNueDaughtersTree->Branch("start_dedxV", &fDedxV, "start_dedxV/F");
+    fNueDaughtersTree->Branch("start_dedxY", &fDedxY, "start_dedxY/F");
+    fNueDaughtersTree->Branch("start_hitsU", &fDedxHitsU, "start_hitsU/I");
+    fNueDaughtersTree->Branch("start_hitsV", &fDedxHitsV, "start_hitsV/I");
+    fNueDaughtersTree->Branch("start_hitsY", &fDedxHitsY, "start_hitsY/I");
+    fNueDaughtersTree->Branch("start_pitchU", &fDedxPitchU, "start_pitchU/F");
+    fNueDaughtersTree->Branch("start_pitchV", &fDedxPitchV, "start_pitchV/F");
+    fNueDaughtersTree->Branch("start_pitchY", &fDedxPitchY, "start_pitchY/F");
+
     if (!m_isData)
     {
         fNueDaughtersTree->Branch("mc_neutrino", &fMatchedNeutrino, "mc_neutrino/O");
@@ -309,6 +365,9 @@ void NueCC::clearEvent()
     fNu_NhitsU = 0;
     fNu_NhitsV = 0;
     fNu_NhitsY = 0;
+    fNu_CaloU = 0;
+    fNu_CaloV = 0;
+    fNu_CaloY = 0;
     fNu_NSpacepoints = 0;
     fNumNu = 0;
 
@@ -346,7 +405,34 @@ void NueCC::clearDaughter()
     fNhitsU = 0;
     fNhitsV = 0;
     fNhitsY = 0;
+    fCaloU = 0;
+    fCaloV = 0;
+    fCaloY = 0;
     fNSpacepoints = 0;
+
+    // Track info
+    fTrackLength = 0;
+    fTrackDirX = 0;
+    fTrackDirY = 0;
+    fTrackDirZ = 0;
+    fTrackEndX = 0;
+    fTrackEndY = 0;
+    fTrackEndZ = 0;
+    // Shower info
+    fShowerLength = 0;
+    fShowerOpenAngle = 0;
+    fShowerDirX = 0;
+    fShowerDirY = 0;
+    fShowerDirZ = 0;
+    fDedxU = 0;
+    fDedxV = 0;
+    fDedxY = 0;
+    fDedxHitsU = 0;
+    fDedxHitsV = 0;
+    fDedxHitsY = 0;
+    fDedxPitchU = 0;
+    fDedxPitchV = 0;
+    fDedxPitchY = 0;
 }
 
 DEFINE_ART_MODULE(NueCC)

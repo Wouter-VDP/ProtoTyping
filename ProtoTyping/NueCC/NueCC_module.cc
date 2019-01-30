@@ -47,10 +47,10 @@ void NueCC::FillReconstructed(art::Event const &evt)
   larpandora.CollectVertices(evt, m_pfp_producer, vertexVector_dummy, particlesToVertices);
   larpandora.CollectPFParticles(evt, m_pfp_producer, particleVector_dummy, particlesToClusters);
   larpandora.CollectPFParticles(evt, m_pfp_producer, particleVector_dummy, particlesToSpacePoints);
-  larpandora.CollectShowers (evt, m_pfp_producer, pfshowers, particlesToShowers);
+  larpandora.CollectShowers(evt, m_pfp_producer, pfshowers, particlesToShowers);
   larpandora.CollectTracks(evt, m_pfp_producer, pftracks, particlesToTracks);
-  //lar_pandora::ClusterVector clusterVector_dummy;
-  //larpandora.CollectClusters(evt, m_pfp_producer, clusterVector_dummy, clustersToHits);
+  lar_pandora::ClusterVector clusterVector_dummy;
+  larpandora.CollectClusters(evt, m_pfp_producer, clusterVector_dummy, clustersToHits);
   //larpandora.CollectSpacePoints(evt, m_pfp_producer, spacePointVector_dummy, spacePointsToHits, hitsToSpacePoints);
 
   // Start filling information
@@ -99,30 +99,114 @@ void NueCC::FillReconstructed(art::Event const &evt)
       }
     }
   }
-  //std::cout << "[NueCC::FillReconstructed] Collected tracks: " << pftracks.size() <<  ", Collected showers: " << pfshowers.size() << std::endl;
-  //std::cout << "[NueCC::FillReconstructed] Number of tracks: " << fNumTracks << ", Number of showers: " << fNumShowers << std::endl;
 }
 
 bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
 {
   clearDaughter();
-  fGeneration = larpandora.GetGeneration(particleMap, pfp);
+  const lar_pandora::ClusterVector cluster_vec = particlesToClusters.at(pfp);
+  std::vector<uint> nHits;
+  std::vector<float> pfenergy;
+  energyHelper.energy_from_hits(cluster_vec, nHits, pfenergy);
+  fNhitsU = nHits[0];
+  fNhitsV = nHits[1];
+  fNhitsY = nHits[2];
+  fCaloU = pfenergy[0];
+  fCaloV = pfenergy[1];
+  fCaloY = pfenergy[2];
+  fNu_NhitsU += fNhitsU;
+  fNu_NhitsV += fNhitsV;
+  fNu_NhitsY += fNhitsY;
+  fNu_CaloU += fCaloU;
+  fNu_CaloV += fCaloV;
+  fNu_CaloY += fCaloY;
+
+  if (particlesToSpacePoints.find(pfp) == particlesToSpacePoints.end())
+  {
+    // If a daughter has no associated spacepoints, count the hits to contribute to the total, but dont save the daughter
+    std::cout << "[NueCC::FillDaughters] Daughter had no associated spacepoints." << std::endl;
+    return false;
+  }
+  fNSpacepoints = particlesToSpacePoints.at(pfp).size();
+  fNu_NSpacepoints += fNSpacepoints;
+
+  if (particlesToVertices.find(pfp) == particlesToVertices.end())
+  {
+    // If a daughter has no associated vertex, count the hits to contribute to the total, but dont save the daughter
+    std::cout << "[NueCC::FillDaughters] Daughter had no associated vertex." << std::endl;
+    return false;
+  }
+
+  if (particlesToMetadata.at(pfp).size() != 1 || particlesToVertices.at(pfp).size() != 1)
+  {
+    std::cout << "[NueCC::FillDaughters] Daughter association problem." << std::endl;
+    return false;
+  }
+  const recob::Vertex::Point_t &pfp_vtx = particlesToVertices.at(pfp).front()->position();
+  fVx = pfp_vtx.X();
+  fVy = pfp_vtx.Y();
+  fVz = pfp_vtx.Z();
+  const larpandoraobj::PFParticleMetadata::PropertiesMap &pfp_properties = particlesToMetadata.at(pfp).front()->GetPropertiesMap();
+  fTrackScore = pfp_properties.at("TrackScore");
+  fVtxDistance = pandoraInterfaceHelper.Distance3D(fVx, fVy, fVz, fNu_Vx, fNu_Vy, fNu_Vz);
+
+  // Track-like fields
   if (particlesToTracks.find(pfp) != particlesToTracks.end())
   {
 
     fIsTrack = true;
     fNumTracks++;
     const art::Ptr<recob::Track> this_track = particlesToTracks.at(pfp).front();
-    std::cout<< "[NueCC::FillDaughters] Tracklength: " << this_track->Length() << std::endl;
+    const recob::Track::Vector_t &track_dir = this_track->StartDirection();
+    fTrackLength = this_track->Length();
+    fTrackDirX = track_dir.X();
+    fTrackDirY = track_dir.Y();
+    fTrackDirZ = track_dir.Z();
+    fTrackEndX = this_track->End().X();
+    fTrackEndY = this_track->End().Y();
+    fTrackEndZ = this_track->End().Z();
+    //std::cout << "[NueCC::FillDaughters] HasMomentum: " << this_track->HasMomentum() << ", ParticleId: " << this_track->ParticleId() << std::endl;
   }
+
+  // Shower-like fields
   if (particlesToShowers.find(pfp) != particlesToShowers.end())
   {
     fIsShower = true;
     fNumShowers++;
     const art::Ptr<recob::Shower> this_shower = particlesToShowers.at(pfp).front();
-    std::cout<< "[NueCC::FillDaughters] Showerlength: " << this_shower->Length() << std::endl;
+    if (this_shower->has_length() && this_shower->has_open_angle())
+    {
+      const TVector3 &shower_dir = this_shower->Direction();
+      fShowerLength = this_shower->Length();
+      fShowerOpenAngle = this_shower->OpenAngle();
+      fShowerDirX = shower_dir.X();
+      fShowerDirY = shower_dir.Y();
+      fShowerDirZ = shower_dir.Z();
+
+      std::vector<float> pitches(3, std::numeric_limits<float>::lowest());
+      std::vector<float> dqdx(3, std::numeric_limits<float>::lowest());
+      std::vector<std::vector<float>> dqdx_hits(3, std::vector<float>());
+      energyHelper.dQdx(shower_dir, cluster_vec, clustersToHits, dqdx, dqdx_hits, pitches);
+      std::vector<float> dedx = energyHelper.dEdx_from_dQdx(dqdx);
+
+      fDedxU = dedx[0];
+      fDedxV = dedx[1];
+      fDedxY = dedx[2];
+      fDedxHitsU = dqdx_hits[0].size();
+      fDedxHitsV = dqdx_hits[1].size();
+      fDedxHitsY = dqdx_hits[2].size();
+      fDedxPitchU = pitches[0];
+      fDedxPitchV = pitches[1];
+      fDedxPitchY = pitches[2];
+    }
+    else
+    {
+      std::cout << "[NueCC::FillDaughters] Bad shower, no length or opening angle!" << std::endl;
+    }
   }
 
+  // Hierarchy info
+  fGeneration = larpandora.GetGeneration(particleMap, pfp);
   if (fNumPrimaryDaughters < fNumDaughters)
   {
     if (particleMap.at(pfp->Parent())->PdgCode() == 13)
@@ -140,56 +224,11 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
       }
     }
   }
-
-  const lar_pandora::ClusterVector cluster_vec = particlesToClusters.at(pfp);
-  for (const art::Ptr<recob::Cluster> cluster : cluster_vec)
-  {
-    if (cluster->isValid())
-    {
-      if (cluster->View() == 2)
-        fNhitsY += cluster->NHits();
-      else if (cluster->View() == 0)
-        fNhitsU += cluster->NHits();
-      else
-        fNhitsV += cluster->NHits();
-    }
-  }
-  fNu_NhitsU += fNhitsU;
-  fNu_NhitsV += fNhitsV;
-  fNu_NhitsY += fNhitsY;
-
-  if (particlesToSpacePoints.find(pfp) == particlesToSpacePoints.end())
-  {
-    // If a daughter has no associated spacepoints, count the hits to contribute to the total, but dont save the daughter
-    std::cout << "[NueCC::FillDaughters] Daughter had no associated vertex." << std::endl;
-    return false;
-  }
-  fNSpacepoints = particlesToSpacePoints.at(pfp).size();
-  fNu_NSpacepoints += fNSpacepoints;
-
-  if (particlesToVertices.find(pfp) == particlesToVertices.end())
-  {
-    // If a daughter has no associated vertex, count the hits to contribute to the total, but dont save the daughter
-    std::cout << "[NueCC::FillDaughters] Daughter had no associated vertex." << std::endl;
-    return false;
-  }
-  if (particlesToMetadata.at(pfp).size() != 1 || particlesToVertices.at(pfp).size() != 1)
-  {
-    std::cout << "[NueCC::FillDaughters] Daughter association problem." << std::endl;
-    return false;
-  }
-
-  const larpandoraobj::PFParticleMetadata::PropertiesMap &pfp_properties = particlesToMetadata.at(pfp).front()->GetPropertiesMap();
-  fTrackScore = pfp_properties.at("TrackScore");
-
-  const recob::Vertex::Point_t &pfp_vtx = particlesToVertices.at(pfp).front()->position();
-  fVx = pfp_vtx.X();
-  fVy = pfp_vtx.Y();
-  fVz = pfp_vtx.Z();
-  fVtxDistance = pandoraInterfaceHelper.Distance3D(fVx, fVy, fVz, fNu_Vx, fNu_Vy, fNu_Vz);
   std::cout << "[NueCC::FillDaughters] Trackscore: " << fTrackScore << ", Generation: " << fGeneration;
-  std::cout << ", vtx distance: " << fVtxDistance;
-  std::cout << ", Hits: (" << fNhitsU << "," << fNhitsV << "," << fNhitsY << ")" << std::endl;
+  std::cout << ", vtx distance: " << fVtxDistance << std::endl;
+  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsU << ", Energy: " << fCaloU << ", dedx hits: " << fDedxHitsU << ", dedx: " << fDedxU << ", pitch: " << fDedxPitchU << std::endl;
+  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsV << ", Energy: " << fCaloV << ", dedx hits: " << fDedxHitsV << ", dedx: " << fDedxV << ", pitch: " << fDedxPitchV << std::endl;
+  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsY << ", Energy: " << fCaloY << ", dedx hits: " << fDedxHitsY << ", dedx: " << fDedxY << ", pitch: " << fDedxPitchY << std::endl;
   return true;
 }
 
@@ -277,7 +316,7 @@ void NueCC::FillTrueNu(art::Event const &evt)
       fTrueNu_Vz = mcnu.Nu().Vz();
       pandoraInterfaceHelper.SCE(fTrueNu_Vx, fTrueNu_Vy, fTrueNu_Vz, fTrueNu_Time,
                                  fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce);
-      std::cout << ", CCNC: " << fTrueNu_CCNC  << ", PDG: " << fTrueNu_PDG <<", E: " << fTrueNu_Energy << std::endl;
+      std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << std::endl;
     }
   }
 }
@@ -287,7 +326,7 @@ void NueCC::FillTrueNuDaughters(art::Event const &evt)
   lar_pandora::MCParticleVector mcparticles;
   larpandora.CollectMCParticles(evt, m_geant_producer, mcparticles);
 
-  for (auto const& mcparticle : mcparticles)
+  for (auto const &mcparticle : mcparticles)
   {
     if (!(mcparticle->Process() == "primary" &&
           mcparticle->T() != 0 &&
@@ -301,12 +340,15 @@ void NueCC::FillTrueNuDaughters(art::Event const &evt)
       fTrueNu_DaughterPDG.push_back(mcparticle->PdgCode());
 
       bool daughter_matched_neutrino_pfp = false;
-      if(matchedMCParticles.find(mcparticle)!=matchedMCParticles.end())
+      if (matchedMCParticles.find(mcparticle) != matchedMCParticles.end())
       {
         // Check if the corresponding pfparticle is also attached to the neutrino:
-        for( auto const& [key, val] : matchedParticles ){
-          if(val->TrackId () == mcparticle->TrackId()){
-            if(larpandora.IsNeutrino( larpandora.GetParentPFParticle (particleMap, key))){
+        for (auto const &[key, val] : matchedParticles)
+        {
+          if (val->TrackId() == mcparticle->TrackId())
+          {
+            if (larpandora.IsNeutrino(larpandora.GetParentPFParticle(particleMap, key)))
+            {
               daughter_matched_neutrino_pfp = true;
               break;
             }
