@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nuecc_nue_mcc9_nov">
+<!ENTITY name "nuecc_nu_mcc9_nov">
 <!ENTITY version "v08_02_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "prodgenie_intrinsic_nue_cosmics_mcc9.0_nov_fullmc_reco2_slim">
+<!ENTITY dataset "prodgenie_bnb_nu_cosmics_mcc9.0_nov_fullmc_reco2_slim">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>95420</numevents>
+    <numevents>193180</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -35,7 +35,7 @@
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>477</numjobs>
+        <numjobs>966</numjobs>
         <disk>5GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>10</maxfilesperjob>
