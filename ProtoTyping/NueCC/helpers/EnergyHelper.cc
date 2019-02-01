@@ -183,12 +183,15 @@ std::vector<float> EnergyHelper::dEdx_from_dQdx(std::vector<float> dqdx)
 {
     std::vector<float> dedx;
 
-    float Rho = 1.4;
-    float Efield = 0.273;
-
     for (size_t i = 0; i < dqdx.size(); i++)
     {
-        dedx.push_back((exp(dqdx[i] * (_betap / (Rho * Efield)) * _work_function) - _alpha) / (_betap / (Rho * Efield)));
+        // More advance model
+        // float Rho = 1.4;
+        // float Efield = 0.273;
+        // dedx.push_back((exp(dqdx[i] * (_betap / (Rho * Efield)) * _work_function) - _alpha) / (_betap / (Rho * Efield)));
+        
+        // Fake linear model: https://arxiv.org/pdf/1704.02927.pdf pag. 16
+        dedx.push_back( dqdx[i] * _work_function / _recombination_factor);
     }
     return dedx;
 }
