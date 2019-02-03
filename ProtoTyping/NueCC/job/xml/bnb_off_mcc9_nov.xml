@@ -3,7 +3,7 @@
 <!ENTITY name "nuecc_off_mcc9_nov">
 <!ENTITY version "v08_02_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "data_extbnb_run1_dev_mcc9.0_nov_reco_2d_reco2_slim">
+<!ENTITY dataset "wvdp_data_extbnb_run1_dev_mcc9.0_nov_reco_2d_reco2_slim_good">
 <!ENTITY user "wvdp">
 ]>
 
@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Uboonecode/version8/srcs/ProtoTyping/ProtoTyping/NueCC/job/</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_1Feb.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_3Feb.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
