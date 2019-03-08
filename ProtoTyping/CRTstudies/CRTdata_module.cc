@@ -17,6 +17,7 @@
 #include "art/Framework/Services/Optional/TFileService.h"
 
 #include "ubobj/CRT/CRTHit.hh"
+#include "ubobj/CRT/CRTSimData.hh"
 #include "ubobj/RawData/DAQHeaderTimeUBooNE.h"
 #include <TTree.h>
 
@@ -124,7 +125,14 @@ void CRTdata::analyze(art::Event const &e)
   art::Handle<std::vector<crt::CRTHit>> crthit_h;
   e.getByLabel(m_CRTHit_producer, crthit_h);
 
-  // Set the variable for the number of CRT hits in the event.
+  art::Handle<std::vector<crt::CRTSimData>> crtsimdata_h;
+  e.getByLabel("crtdetsim", crtsimdata_h);
+
+  if (!crtsimdata_h.isValid())
+  {
+    std::cout << "[CRTdata::analyze] crtsimdata_h is not valid!" << std::endl;
+  }
+
   if (!crthit_h.isValid())
   {
     std::cout << "[CRTdata::analyze] ... could not locate CRT Hits, Event skipped!" << std::endl;

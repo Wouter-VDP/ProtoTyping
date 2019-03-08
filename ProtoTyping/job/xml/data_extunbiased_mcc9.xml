@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "extunbiased_run3_mcc9">
-<!ENTITY version "v07_11_00">
+<!ENTITY name "extunbiased_run1">
+<!ENTITY version "v08_02_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "data_extunbiased_run3_dev_mcc9.0_nov_reco_2d_reco2">
+<!ENTITY dataset "wvdp_data_extunbiased_50k_v08_0_0_4">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>49041</numevents>
+    <numevents>23862</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -22,20 +22,20 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v7_11_9Dec.tar</local>
+        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/CosmicStudies/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_21Feb.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
     <stage name="cosmicstudies">
-        <fcl>cosmicstudies_CRT_data.fcl</fcl>
+        <fcl>cosmicstudies_data.fcl</fcl>
         
-        <outdir>/pnfs/uboone/resilient/users/&user;/&version;/&name;</outdir>
+        <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
         <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>50</numjobs>
+        <numjobs>65</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>23</maxfilesperjob>

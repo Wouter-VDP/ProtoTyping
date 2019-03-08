@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nuecc_off_mcc9_nov">
+<!ENTITY name "corsika_cmc_sce">
 <!ENTITY version "v08_02_00">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "wvdp_data_extbnb_run1_dev_mcc9.0_nov_reco_2d_reco2_slim_good">
+<!ENTITY dataset "wvdp_prodgenie_cosrika_cmc_sce_6k_v08_0_0_4">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>132687</numevents>
+    <numevents>8160</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -22,23 +22,23 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Uboonecode/version8/srcs/ProtoTyping/ProtoTyping/NueCC/job/</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_3Feb.tar</local>
+        <fcldir>/uboone/app/users/&user;/Larsoft/srcs/ProtoTyping/ProtoTyping/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_21Feb.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
-    <stage name="nuecc">
-        <fcl>run_nuecc_analyser_beamOnData.fcl</fcl>
+    <stage name="cosmicstudies">
+        <fcl>cosmicstudies_CRT.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
-        <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
+        <workdir>/pnfs/uboone/resilient/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>494</numjobs>
+        <numjobs>41</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
-        <maxfilesperjob>20</maxfilesperjob>
+        <maxfilesperjob>10</maxfilesperjob>
         <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       

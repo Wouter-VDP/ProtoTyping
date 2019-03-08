@@ -134,7 +134,12 @@ void CosmicStudies::fill_MC(art::Event const &evt)
   {
     auto const &generator_handle = evt.getValidHandle<std::vector<simb::MCTruth>>("generator");
     auto const &generator(*generator_handle);
-    fNum_nu = generator.size();
+    if( generator.size() == 1){
+      fNum_nu = generator[0].NeutrinoSet(); 
+    }
+    else{
+      fNum_nu = generator.size();
+    }
 
     if (m_verb)
     {

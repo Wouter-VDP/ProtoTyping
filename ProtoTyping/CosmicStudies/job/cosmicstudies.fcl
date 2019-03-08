@@ -6,10 +6,10 @@ cosmicstudies_analyzer:
 { 
     module_type:                "CosmicStudies"
     pfp_producer:               "pandoraCosmic"
-    is_mcc9:                    false
+    is_mcc9:                    true
     is_data:                    false
     is_true_nu:                 false
-    is_slimmed:                 false
+    is_slimmed:                 true
     verbose_output:             true
 }
 
@@ -30,9 +30,12 @@ services: {
   message:                       @local::standard_info
   TPCEnergyCalibService:         @local::microboone_tpcenergycalib_service
   SpaceCharge:                   @local::microboone_spacecharge
+  DetectorProperties:            @local::microboone_detproperties
+  LArProperties:                 @local::microboone_properties
+  DetectorClocksService:         @local::microboone_detectorclocks
 
   scheduler:    { defaultExceptions: false }    # Make all uncaught exceptions fatal.
-  TFileService: { fileName: "CosmicStudies_tree.root" }
+  TFileService: { fileName: "CosmicStudiesCRT_tree.root" }
 }
 
 outputs:
