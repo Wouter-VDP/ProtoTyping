@@ -6,13 +6,15 @@ defaultqual e17
 fcldir product_dir job
 #
 product         version
-larsoft		       v08_02_00
-cetbuildtools	   v7_06_03	-	only_for_build
+larsoft		       v08_00_00_07
+ubreco             v08_00_00_07
+larpandora         v08_03_00_03
+cetbuildtools	   v7_06_04	-	only_for_build
 
 end_product_list
 
   
-# e9  - with gcc 4.9.3 and -std=c++14
+# e17  - with gcc 7.3.0 and -std=c++17
 qualifier	gcc	notes
 e17:debug	-nq-
 e17:opt		-nq-

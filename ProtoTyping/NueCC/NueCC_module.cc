@@ -1,5 +1,19 @@
 #include "NueCC.h"
 
+void NueCC::endSubRun(art::SubRun &subrun)
+{
+  if (!m_isData)
+  {
+    art::Handle<sumdata::POTSummary> potSummaryHandle;
+    m_pot = subrun.getByLabel("generator", potSummaryHandle) ? static_cast<float>(potSummaryHandle->totpot) : 0.f;
+    std::cout << "[LArPandoraExternalEventBuilding::endSubRun] Storing POT info!" << std::endl;
+  }
+
+  m_run = subrun.run();
+  m_subrun = subrun.subRun();
+  fSubrunTree->Fill();
+}
+
 void NueCC::analyze(art::Event const &evt)
 {
   clearEvent();

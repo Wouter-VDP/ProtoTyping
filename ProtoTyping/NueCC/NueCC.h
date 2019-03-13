@@ -27,6 +27,7 @@
 #include "lardataobj/RecoBase/Cluster.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
+#include "larcoreobj/SummaryData/POTSummary.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
@@ -102,6 +103,8 @@ class NueCC : public art::EDAnalyzer
      *  @return 1 if succesfully matched, 0 if not matched.
      */
     bool MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp);
+
+    void endSubRun(art::SubRun &subrun);
 
   private:
     // Fields needed for the analyser
@@ -216,6 +219,11 @@ class NueCC : public art::EDAnalyzer
     float fTrueEnergy;
     float fTrueVx, fTrueVy, fTrueVz;
     float fTrueVxSce, fTrueVySce, fTrueVzSce;
+
+    //// Tree for the POT subrun info
+    TTree *fSubrunTree;
+    uint m_run, m_subrun;
+    float m_pot;
 };
 
 void NueCC::reconfigure(fhicl::ParameterSet const &p)
@@ -352,6 +360,13 @@ NueCC::NueCC(fhicl::ParameterSet const &p)
         fNueDaughtersTree->Branch("mc_energy", &fTrueEnergy, "mc_energy/F");
         fNueDaughtersTree->Branch("mc_pdg", &fTruePDG, "mc_pdg/I");
     }
+
+    fSubrunTree = tfs->make<TTree>("subruns", "SubRun Tree");
+    fSubrunTree->Branch("run", &m_run, "run/i");
+    fSubrunTree->Branch("subRun", &m_subrun, "subRun/i");
+
+    if (!m_isData)
+        fSubrunTree->Branch("pot", &m_pot, "pot/F");
 }
 
 void NueCC::clearEvent()

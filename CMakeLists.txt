@@ -23,20 +23,17 @@ SET ( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
 IF (NOT CETBUILDTOOLS_VERSION)
     MESSAGE (FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules")
 ENDIF()
-
-set(CMAKE_MODULE_PATH $ENV{CANVAS_DIR}/Modules
+set(CMAKE_MODULE_PATH $ENV{CANVAS_ROOT_IO_DIR}/Modules
 		      $ENV{CETBUILDTOOLS_DIR}/Modules
 		      ${CMAKE_MODULE_PATH})
-
 include(CetCMakeEnv)
 cet_cmake_env()
-
 cet_set_compiler_flags(DIAGS CAUTIOUS
   WERROR
   NO_UNDEFINED
   ALLOW_DEPRECATIONS
-  EXTRA_FLAGS -pedantic -Wno-unused-local-typedefs)
-
+  EXTRA_FLAGS -pedantic -Wno-unused-local-typedefs -Wno-expansion-to-defined
+)
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
@@ -54,6 +51,7 @@ find_ups_product( art v1_09_00 )
 find_ups_product( pandora v02_00_00 )
 find_ups_product( larpandoracontent v02_04_00 )
 find_ups_product( ubobj v1_00_00 )
+find_ups_product( ubreco v1_00_00 )
 find_ups_product( cetbuildtools v4_09_00 )
 find_ups_product( postgresql v9_1_5 )
 
