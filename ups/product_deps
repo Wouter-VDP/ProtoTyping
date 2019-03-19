@@ -6,20 +6,18 @@ defaultqual e17
 fcldir product_dir job
 #
 product         version
-larsoft		       v08_00_00_07
-ubreco             v08_00_00_07
+ubreco             v08_00_00_09
 larpandora         v08_03_00_03
-cetbuildtools	   v7_06_04	-	only_for_build
-
+cetbuildtools	   v7_11_00	-	only_for_build
 end_product_list
 
+
   
-# e17  - with gcc 7.3.0 and -std=c++17
-qualifier	gcc	notes
-e17:debug	-nq-
-e17:opt		-nq-
-e17:prof	-nq-
+qualifier      ubreco         larpandora             
+e17:debug      e17:debug      e17:debug
+e17:prof       e17:prof       e17:prof
 end_qualifier_list
+
 
 # Preserve tabs and formatting in emacs and vi / vim:
 
