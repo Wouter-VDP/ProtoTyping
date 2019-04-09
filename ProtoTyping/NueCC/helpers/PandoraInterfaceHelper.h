@@ -83,7 +83,7 @@ public:
   void SCE(const float &x, 
             const float &y, 
             const float &z, 
-            const float &time, 
+            const float &nu_time, 
             float &x_out, float &y_out, float &z_out);
 
 protected:

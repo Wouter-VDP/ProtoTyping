@@ -104,7 +104,7 @@ class NueCC : public art::EDAnalyzer
      */
     bool MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp);
 
-    void endSubRun(art::SubRun &subrun);
+    void endSubRun(const art::SubRun &subrun);
 
   private:
     // Fields needed for the analyser

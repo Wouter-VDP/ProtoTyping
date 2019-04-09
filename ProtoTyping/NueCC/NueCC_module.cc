@@ -1,6 +1,6 @@
 #include "NueCC.h"
 
-void NueCC::endSubRun(art::SubRun &subrun)
+void NueCC::endSubRun(const art::SubRun &subrun)
 {
   if (!m_isData)
   {

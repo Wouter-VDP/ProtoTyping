@@ -263,7 +263,7 @@ float PandoraInterfaceHelper::Distance3D(float x1, float y1, float z1, float x2,
 void PandoraInterfaceHelper::SCE(const float &x,
                                  const float &y,
                                  const float &z,
-                                 const float &time,
+                                 const float &nu_time,
                                  float &x_out, float &y_out, float &z_out)
 {
   auto const &SCE(*lar::providerFrom<spacecharge::SpaceChargeService>());
@@ -272,12 +272,12 @@ void PandoraInterfaceHelper::SCE(const float &x,
   y_out = y + sce_start.Y();
   z_out = z + sce_start.Z();
 
-  auto const &detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>();
-  auto const &detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
-  // This line does not work well for overlay samples
-  float g4Ticks = detClocks->TPCG4Time2Tick(time) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
+  auto const& detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>(); 
+  auto const& detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
+  float g4Ticks = detClocks->TPCG4Time2Tick(nu_time) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
   float xtimeoffset = detProperties->ConvertTicksToX(g4Ticks, 0, 0, 0);
-  x_out = (x + xtimeoffset + sce_start.X()) * (1.114 / 1.098) + 0.6;
+  
+  x_out = (x + xtimeoffset - sce_start.X())+ 0.6;
 }
 
 #endif
