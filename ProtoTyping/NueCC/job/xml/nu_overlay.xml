@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nuecc_off_mcc9_nov_all">
-<!ENTITY version "v08_02_00">
+<!ENTITY name "nuecc_nu_overlay_mcc9">
+<!ENTITY version "v08_00_00_09">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "data_extbnb_run1_dev_mcc9.0_nov_reco_2d_reco2_slim">
+<!ENTITY dataset "prodgenie_bnb_nu_uboone_overlay_mcc9_postCSU_v08_00_00_12_run1_reco2">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>200318</numevents>
+    <numevents>1000000</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -22,20 +22,20 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Uboonecode/version8/srcs/ProtoTyping/ProtoTyping/NueCC/job/</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_02_3Feb.tar</local>
+        <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_09/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_009_8Apr.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
     <stage name="nuecc">
-        <fcl>run_nuecc_analyser_beamOnData.fcl</fcl>
+        <fcl>run_nuecc_analyser_overlay.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>667</numjobs>
+        <numjobs>400</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>20</maxfilesperjob>

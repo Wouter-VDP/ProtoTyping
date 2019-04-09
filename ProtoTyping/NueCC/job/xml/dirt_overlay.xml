@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nuecc_overlay_mcc9">
+<!ENTITY name "nuecc_dirt_overlay_mcc9">
 <!ENTITY version "v08_00_00_09">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "prodgenie_bnb_nu_uboone_overlay_mcc9_v08_00_00_10_run1_reco2">
+<!ENTITY dataset "prodgenie_bnb_dirt_uboone_overlay_mcc9_v08_00_00_10_run1_reco2">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>59494</numevents>
+    <numevents>1000000</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_09/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_009_24Mar.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_009_8Apr.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -35,10 +35,10 @@
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>376</numjobs>
+        <numjobs>85</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
-        <maxfilesperjob>15</maxfilesperjob>
+        <maxfilesperjob>10</maxfilesperjob>
         <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       

@@ -23,16 +23,20 @@ END_PROLOG
 
 services:
 {
-  @table::microboone_services_reco
-  @table::microboone_simulation_services
-
   scheduler:               {defaultExceptions: false}
   TFileService:            {fileName: "flashID_tree.root"}
+
   TimeTracker:             @local::microboone_time_tracker
   MemoryTracker:           @local::microboone_memory_tracker
   message:                 @local::microboone_message_services_prod_debug
   FileCatalogMetadata:     @local::art_file_catalog_mc
   SpaceCharge:             @local::microboone_spacecharge
+  DetectorPropertiesService: @local::microboone_detproperties
+  LArProperties:           @local::microboone_properties
+  DetectorClocksService:   @local::microboone_detectorclocks
+
+   @table::microboone_services_reco
+  @table::microboone_simulation_services
 }
 
 process_name: NueCCAnalyser
@@ -72,11 +76,8 @@ physics:
 services.SpaceCharge.EnableCorrSCE:       true
 services.SpaceCharge.EnableSimEfieldSCE:  true
 services.SpaceCharge.EnableSimSpatialSCE: true
-services.DetectorPropertiesService.NumberTimeSamples:        6400
-services.DetectorPropertiesService.ReadOutWindowSize:        6400
-services.DetectorClocksService.InheritClockConfig:           false
-services.DetectorClocksService.TriggerOffsetTPC:             -0.400e3
-services.DetectorClocksService.TrigModuleName:               "daq"
+services.DetectorClocksService.InheritClockConfig:                         false
+services.DetectorClocksService.TriggerOffsetTPC:                          -0.400e3
 
 physics.producers.pandoraAllOutcomesTrack.PFParticleLabel:  "pandoraPatRec:allOutcomes"
 physics.producers.pandoraAllOutcomesTrack.UseAllParticles: true
@@ -86,6 +87,13 @@ physics.producers.pandoraFlashEventBuilding.ShouldUseTestBeamMode: false
 physics.producers.pandoraFlashEventBuilding.ShouldOutputSubrunsTree: true
 physics.producers.pandoraFlashEventBuilding.IsData: false
 physics.producers.pandoraFlashEventBuilding.GeneratorLabel: "generator"
+
+#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "wcopflash:beam"
+physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "simpleFlashBeam"
+physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.QLLMatch.NormalizeHypothesis:      false
+physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.CoefXCL:  190                          #260
+physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.MinChargeToLightRatio: 50              #100
+physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.MaxChargeToLightRatio:    250.0        #350
 
 outputs:
 {
