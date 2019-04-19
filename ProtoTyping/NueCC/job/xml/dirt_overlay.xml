@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
 <!ENTITY name "nuecc_dirt_overlay_mcc9">
-<!ENTITY version "v08_00_00_09">
+<!ENTITY version "v08_00_00_12">
 <!ENTITY qualifier "e17:prof">
 <!ENTITY dataset "prodgenie_bnb_dirt_uboone_overlay_mcc9_v08_00_00_12_run1_reco2">
 <!ENTITY user "wvdp">
@@ -22,8 +22,8 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_09/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_009_8Apr.tar</local>
+        <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_12/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_15Apr.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -39,7 +39,7 @@
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>10</maxfilesperjob>
-        <jobsub>--expected-lifetime=4h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <jobsub>--expected-lifetime=5h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       
        <schema>root</schema>

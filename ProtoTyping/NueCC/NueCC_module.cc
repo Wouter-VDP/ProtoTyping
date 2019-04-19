@@ -330,7 +330,7 @@ void NueCC::FillTrueNu(art::Event const &evt)
       fTrueNu_Vz = mcnu.Nu().Vz();
       pandoraInterfaceHelper.SCE(fTrueNu_Vx, fTrueNu_Vy, fTrueNu_Vz, fTrueNu_Time,
                                  fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce);
-      std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << std::endl;
+      std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << ", z-vertex: " << fTrueNu_Vz <<std::endl;
     }
   }
 }
