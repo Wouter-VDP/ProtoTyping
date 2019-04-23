@@ -9,7 +9,6 @@ BEGIN_PROLOG
 pandora_flash_event_building: @local::pandora_event_building
 pandora_flash_event_building.SliceIdTool: @local::flash_neutrino_id_tool
 
-
 pandoraAllOutcomesTrack:       @local::microboone_pandoraTrackCreation
 pandoraAllOutcomesShower:      @local::microboone_pandoraShowerCreation
 pandoraFlashEventBuilding:     @local::pandora_flash_event_building
@@ -93,10 +92,6 @@ physics.producers.pandoraFlashEventBuilding.GeneratorLabel: "generator"
 
 #physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "wcopflash:beam"
 physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "simpleFlashBeam"
-#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.QLLMatch.NormalizeHypothesis:      false
-#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.CoefXCL:  190                          #260
-#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.MinChargeToLightRatio: 50              #100
-#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashMatchConfig.MaxChargeToLightRatio:    250.0        #350
 
 outputs:
 {

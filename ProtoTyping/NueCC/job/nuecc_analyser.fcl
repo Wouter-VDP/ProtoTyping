@@ -5,7 +5,7 @@ nuecc_analyser :
     module_type: "NueCC"
 
     # Input producers
-    pfp_producer:              "pandoraFlashEventBuilding"
+    pfp_producer:              "pandoraConsolidated"
     
     # Settings
     is_data:                   false
