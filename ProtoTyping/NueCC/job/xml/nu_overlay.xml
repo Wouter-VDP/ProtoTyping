@@ -23,12 +23,12 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_12/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_15Apr.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_6May.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
     <stage name="nuecc">
-        <fcl>run_nuecc_analyser_overlay.fcl</fcl>
+        <fcl>nuecc_analyser_overlay.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
@@ -39,7 +39,7 @@
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>20</maxfilesperjob>
-        <jobsub>--expected-lifetime=12h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <jobsub>--expected-lifetime=6h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       
        <schema>root</schema>

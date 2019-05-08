@@ -3,7 +3,7 @@
 <!ENTITY name "nuecc_on_mcc9">
 <!ENTITY version "v08_00_00_12">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "wvdp_data_bnb_v08_00_00_09_snap">
+<!ENTITY dataset "data_bnb_optfilter_C1_5e19_goodruns_v08_00_00_12_reco2">
 <!ENTITY user "wvdp">
 ]>
 
@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_12/srcs/ProtoTyping/ProtoTyping/NueCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_15Apr.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_6May.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
@@ -35,11 +35,11 @@
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>1206</numjobs>
+        <numjobs>1208</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
         <maxfilesperjob>10</maxfilesperjob>
-        <jobsub>--expected-lifetime=20h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <jobsub>--expected-lifetime=6h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       
        <schema>root</schema>

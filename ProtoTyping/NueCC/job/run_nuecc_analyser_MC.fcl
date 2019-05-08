@@ -1,7 +1,0 @@
-#include "run_nuecc_analyser.fcl"
-
-physics.producers.pandoraFlashEventBuilding.SliceIdTool.BeamWindowStartTime: 3.16
-physics.producers.pandoraFlashEventBuilding.SliceIdTool.BeamWindowEndTime:   4.84
-physics.producers.pandoraFlashEventBuilding.SliceIdTool.HasMCNeutrino:       true 
-physics.analyzers.nueCCAnalyser.is_data:                                     false
-physics.analyzers.nueCCAnalyser.has_MC_neutrino:                             true

@@ -1,25 +1,64 @@
 #include "pandoramodules_microboone.fcl"
 #include "external_event_building.fcl"
 #include "flash_neutrino_id.fcl"
-#include "nuecc_analyser.fcl"
+#include "shrreco3d.fcl"
 
 BEGIN_PROLOG
 
 # Flash neutrino ID tool - Use optical information only to select the neutrino slice
 pandora_flash_event_building: @local::pandora_event_building
 pandora_flash_event_building.SliceIdTool: @local::flash_neutrino_id_tool
-
-pandoraAllOutcomesTrack:       @local::microboone_pandoraTrackCreation
-pandoraAllOutcomesShower:      @local::microboone_pandoraShowerCreation
+pandora_flash_event_building.ShouldUseTestBeamMode: false
+pandora_flash_event_building.ShouldOutputSubrunsTree: true
+pandora_flash_event_building.IsData: false
+pandora_flash_event_building.GeneratorLabel: "generator"
+pandora_flash_event_building.SliceIdTool.HasCRT: true
+#pandora_flash_event_building.SliceIdTool.FlashLabel: "wcopflash:beam"
+pandora_flash_event_building.SliceIdTool.FlashLabel: "simpleFlashBeam"
 pandoraFlashEventBuilding:     @local::pandora_flash_event_building
+
+# ShowerReco3D
+ShrReco3DPandora: @local::ShrReco3D
+ShrReco3DPandora.PFPproducer : "pandoraSliceId"
+ShrReco3DPandora.Clusproducer : "pandoraSliceId"
+ShrReco3DPandora.Vtxproducer : "pandoraSliceId"
+ShrReco3DPandora.BacktrackTag: ""
+ShrReco3DPandora.NeutrinoEvent: false
+ShrReco3DPandora.ProtoShowerTool: 
+ {
+ tool_type: "ProtoShowerPandora"
+ PFPproducer  : "pandoraSliceId"
+ ClusterProducer : "pandoraSliceId"
+ Vtxproducer  : "pandoraSliceId"     
+ Neutrino     : true
+ NeutrinoScoreMin : 0.1 
+ TrackScoreMax : 1.00 # 1 means all particles reconstructed as showers
+ }
+ 
+
+nuecc_analyser :
+{
+    module_type: "NueCC"
+
+    # Input producers
+    pfp_producer:              "pandoraSliceId"
+}
 
 END_PROLOG
 
-############################################################################################################################################
+###################################################################################
 
 #include "services_microboone.fcl"
 #include "photpropservices_microboone.fcl"
 #include "time_memory_tracker_microboone.fcl"
+
+#include "microboone_crtreco.fcl"
+#include "microboone_crthitcorr.fcl"
+#include "calorimetry_microboone.fcl"
+#include "mcsfitproducer.fcl"
+#include "config_dedx_calibration.fcl"
+#include "config_particle_identification.fcl"
+#include "calibration_microboone.fcl"
 
 services:
 {
@@ -41,39 +80,6 @@ services:
   PmtGainService:           @local::PMTService
 }
 
-process_name: NueCCAnalyser
-
-source:
-{
-  module_type: RootInput
-  maxEvents:  0
-  saveMemoryObjectThreshold: 0
-}
-
-physics:
-{
-
- producers:
- {
-    pandoraAllOutcomesTrack:   @local::pandoraAllOutcomesTrack
-    pandoraAllOutcomesShower:  @local::pandoraAllOutcomesShower
-    pandoraFlashEventBuilding: @local::pandoraFlashEventBuilding
- }
- 
- analyzers: 
- {
-    nueCCAnalyser:      @local::nuecc_analyser
- }
-
- prod: [ pandoraAllOutcomesTrack, pandoraAllOutcomesShower, pandoraFlashEventBuilding ]
- ana: [nueCCAnalyser]
-
- stream1:   [ out1 ]
- trigger_paths: [ prod ]
- end_paths: [ ana ]
-
-}
-
 # Configuration
 services.SpaceCharge.EnableCorrSCE:       true
 services.SpaceCharge.EnableSimEfieldSCE:  true
@@ -81,17 +87,14 @@ services.SpaceCharge.EnableSimSpatialSCE: true
 services.DetectorClocksService.InheritClockConfig:                         false
 services.DetectorClocksService.TriggerOffsetTPC:                          -0.400e3
 
-physics.producers.pandoraAllOutcomesTrack.PFParticleLabel:  "pandoraPatRec:allOutcomes"
-physics.producers.pandoraAllOutcomesTrack.UseAllParticles: true
-physics.producers.pandoraAllOutcomesShower.PFParticleLabel: "pandoraPatRec:allOutcomes"
-physics.producers.pandoraAllOutcomesShower.UseAllParticles: true
-physics.producers.pandoraFlashEventBuilding.ShouldUseTestBeamMode: false
-physics.producers.pandoraFlashEventBuilding.ShouldOutputSubrunsTree: true
-physics.producers.pandoraFlashEventBuilding.IsData: false
-physics.producers.pandoraFlashEventBuilding.GeneratorLabel: "generator"
+process_name: NueCCAnalyser
 
-#physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "wcopflash:beam"
-physics.producers.pandoraFlashEventBuilding.SliceIdTool.FlashLabel: "simpleFlashBeam"
+source:
+{
+  module_type: RootInput
+  maxEvents:  -1
+  saveMemoryObjectThreshold: 0
+}
 
 outputs:
 {
@@ -104,3 +107,4 @@ outputs:
    saveMemoryObjectThreshold: 0
  }
 }
+
