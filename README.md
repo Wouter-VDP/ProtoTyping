@@ -1,5 +1,5 @@
 # ProtoTyping UPS product
-Collection of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v07_11_00 and higher.
+Collection of LarSoft analysers to test out things. This is a stand-alone ups-like product, that is tested and working in Uboonecode v08_00_00_12 and higher.
 
 ## NuCC
 Charged current neutrino selection using advanced slice ID neutrino ID and pandora consolidated reconstruction.
