@@ -27,6 +27,8 @@
 #include "lardataobj/RecoBase/Cluster.h"
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
+#include "lardataobj/RecoBase/MCSFitResult.h"
+
 #include "larcoreobj/SummaryData/POTSummary.h"
 
 #include "nusimdata/SimulationBase/MCParticle.h"
@@ -94,7 +96,8 @@ class NuCC : public art::EDAnalyzer
      *  @param  pfparticle ptr The Pfparticle corresponding to the daughter.
      *  @return 1 if succesful, 0 if failure.
      */
-    bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp);
+    bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
+                       const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle);
 
     /**
      *  @brief  Fill the information about the matching of the reconstructed daughter
@@ -198,6 +201,9 @@ class NuCC : public art::EDAnalyzer
     float fTrackEndX;
     float fTrackEndY;
     float fTrackEndZ;
+    float fTrackMCS_mom;
+    float fTrackMCS_err;
+    float fTrackMCS_ll;
     // Shower info
     float fShowerLength;
     float fShowerOpenAngle;
@@ -333,6 +339,11 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("track_dirx", &fTrackDirX, "track_dirx/F");
     fNueDaughtersTree->Branch("track_diry", &fTrackDirY, "track_diry/F");
     fNueDaughtersTree->Branch("track_dirz", &fTrackDirZ, "track_dirz/F");
+
+    fNueDaughtersTree->Branch("track_mcs_mom", &fTrackMCS_mom, "track_mcs_mom/F");
+    fNueDaughtersTree->Branch("track_mcs_err", &fTrackMCS_err, "track_mcs_err/F");
+    fNueDaughtersTree->Branch("track_mcs_ll", &fTrackMCS_ll, "track_mcs_ll/F");
+    
     fNueDaughtersTree->Branch("shower_length", &fShowerLength, "shower_length/F");
     fNueDaughtersTree->Branch("shower_openangle", &fShowerOpenAngle, "shower_openangle/F");
     fNueDaughtersTree->Branch("shower_dirx", &fShowerDirX, "shower_dirx/F");

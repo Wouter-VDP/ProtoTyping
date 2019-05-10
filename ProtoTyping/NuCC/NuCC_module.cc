@@ -66,6 +66,7 @@ void NuCC::FillReconstructed(art::Event const &evt)
   lar_pandora::ClusterVector clusterVector_dummy;
   larpandora.CollectClusters(evt, m_pfp_producer, clusterVector_dummy, clustersToHits);
   //larpandora.CollectSpacePoints(evt, m_pfp_producer, spacePointVector_dummy, spacePointsToHits, hitsToSpacePoints);
+  const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle = evt.getValidHandle<std::vector<recob::MCSFitResult>>("pandoraMCSMu");
 
   // Start filling information
   art::Ptr<recob::PFParticle> pfnu = pfneutrinos.front();
@@ -101,7 +102,7 @@ void NuCC::FillReconstructed(art::Event const &evt)
   {
     if (!pfp->IsPrimary())
     {
-      if (!FillDaughters(pfp))
+      if (!FillDaughters(pfp, MCSMu_handle))
       {
         fDaughtersStored = false;
       }
@@ -115,7 +116,8 @@ void NuCC::FillReconstructed(art::Event const &evt)
   }
 }
 
-bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
+bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
+                         const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle)
 {
   clearDaughter();
   const lar_pandora::ClusterVector cluster_vec = particlesToClusters.at(pfp);
@@ -179,7 +181,13 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
     fTrackEndX = this_track->End().X();
     fTrackEndY = this_track->End().Y();
     fTrackEndZ = this_track->End().Z();
-    //std::cout << "[NuCC::FillDaughters] HasMomentum: " << this_track->HasMomentum() << ", ParticleId: " << this_track->ParticleId() << std::endl;
+
+    // MCS momentum:
+    const recob::MCSFitResult &mcsMu = MCSMu_handle->at(this_track.key());
+    fTrackMCS_mom = mcsMu.fwdMomentum();
+    fTrackMCS_err = mcsMu.fwdMomUncertainty();
+    fTrackMCS_ll = mcsMu.fwdLogLikelihood();
+    std::cout << "[NuCC::FillDaughters] " << "fTrackMCS_mom" << fTrackMCS_mom << std::endl;
   }
 
   // Shower-like fields
@@ -330,7 +338,7 @@ void NuCC::FillTrueNu(art::Event const &evt)
       fTrueNu_Vz = mcnu.Nu().Vz();
       pandoraInterfaceHelper.SCE(fTrueNu_Vx, fTrueNu_Vy, fTrueNu_Vz, fTrueNu_Time,
                                  fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce);
-      std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << ", z-vertex: " << fTrueNu_Vz <<std::endl;
+      std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << ", z-vertex: " << fTrueNu_Vz << std::endl;
     }
   }
 }
