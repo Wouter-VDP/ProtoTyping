@@ -2,8 +2,42 @@
 #include "external_event_building.fcl"
 #include "flash_neutrino_id.fcl"
 #include "shrreco3d.fcl"
+#include "microboone_crtreco.fcl"
+#include "microboone_crthitcorr.fcl"
+#include "calorimetry_microboone.fcl"
+#include "mcsfitproducer.fcl"
+#include "config_dedx_calibration.fcl"
+#include "config_particle_identification.fcl"
+#include "calibration_microboone.fcl"
 
 BEGIN_PROLOG
+
+# crtsimhitcorr: only acts on the simulated CRT hits, which need a higher threshold 
+crtsimhitcorr: @local::crtsimhitcorr_filter
+crtsimhitcorr.HitThreshold: 70.0
+crtsimhitcorr.StripThreshold: 5.0
+crtsimhitcorr.SiPMThreshold: 0.0
+crtsimhitcorr.PEscaleFactor: -1.0 #-1.0 means skip this (or use 1.0)
+crtsimhitcorr.CrtHitsIn_Label: "mixer"
+crtsimhitcorr.RemoveBottomHits: true
+
+# crthitcorr: only on data hits, and make the alignment corrections to the position
+crthitcorr: @local::crtdatahitcorr
+crthitcorr.CorrectAlignment: true
+crthitcorr.StripThreshold: 0.0
+crthitcorr.SiPMThreshold: 0.0
+crthitcorr.HitThreshold: 70.0
+crthitcorr.NumberCollections: 1
+
+crttzero: @local::crttzero
+crttzero.data_label: "crthitcorr"
+
+trackmatch: @local::t0recocrthit_data
+trackmatch.MatchCutTop: 40
+trackmatch.MatchCut: 25
+trackmatch.data_label_TPCtrack: "pandoraAllOutcomesTrack"
+trackmatch.data_label_CRThit: "crthitcorr"
+trackmatch.data_label_CRTtzero: "crttzero"
 
 # Flash neutrino ID tool - Use optical information only to select the neutrino slice
 pandora_flash_event_building: @local::pandora_event_building
@@ -15,9 +49,23 @@ pandora_flash_event_building.GeneratorLabel: "generator"
 pandora_flash_event_building.SliceIdTool.HasCRT: true
 #pandora_flash_event_building.SliceIdTool.FlashLabel: "wcopflash:beam"
 pandora_flash_event_building.SliceIdTool.FlashLabel: "simpleFlashBeam"
-pandoraFlashEventBuilding:     @local::pandora_flash_event_building
 
-# ShowerReco3D
+# MCS momentum, Clorimetry and PID
+pandoraMCSMu:                     @local::mcsfitproducer
+pandoraMCSMu.inputs.inputLabel: "pandoraSliceId"
+pandoracaloSCE: @local::microboone_calomc
+pandoracaloSCE.TrackModuleLabel: "pandoraSliceId"
+pandoracaloSCE.SpacePointModuleLabel: "pandoraSliceId"
+pandoracaloSCE.CorrectSCE: true
+pandoracaliSCE: @local::microboone_calibrationdedx
+pandoracaliSCE.TrackModuleLabel: "pandoraSliceId"
+pandoracaliSCE.CalorimetryModuleLabel: "pandoracaloSCE"
+pandoracaliSCE.CorrectSCE: true
+pandoracalipidSCE: @local::particleidconfig
+pandoracalipidSCE.ProducerLabels.TrackLabel: "pandoraSliceId"
+pandoracalipidSCE.ProducerLabels.CalorimetryLabel: "pandoracaliSCE"
+
+# ShowerReco3D - David his shower reco tool including calorimetry
 ShrReco3DPandora: @local::ShrReco3D
 ShrReco3DPandora.PFPproducer : "pandoraSliceId"
 ShrReco3DPandora.Clusproducer : "pandoraSliceId"
@@ -34,14 +82,13 @@ ShrReco3DPandora.ProtoShowerTool:
  NeutrinoScoreMin : 0.1 
  TrackScoreMax : 1.00 # 1 means all particles reconstructed as showers
  }
- 
 
-nuecc_analyser :
+nucc_analyser: 
 {
     module_type: "NuCC"
 
     # Input producers
-    pfp_producer:              "pandoraSliceId"
+    pfp_producer: "pandoraSliceId"
 }
 
 END_PROLOG
@@ -52,13 +99,7 @@ END_PROLOG
 #include "photpropservices_microboone.fcl"
 #include "time_memory_tracker_microboone.fcl"
 
-#include "microboone_crtreco.fcl"
-#include "microboone_crthitcorr.fcl"
-#include "calorimetry_microboone.fcl"
-#include "mcsfitproducer.fcl"
-#include "config_dedx_calibration.fcl"
-#include "config_particle_identification.fcl"
-#include "calibration_microboone.fcl"
+process_name: NuCCAnalyser
 
 services:
 {
@@ -87,13 +128,12 @@ services.SpaceCharge.EnableSimSpatialSCE: true
 services.DetectorClocksService.InheritClockConfig:                         false
 services.DetectorClocksService.TriggerOffsetTPC:                          -0.400e3
 
-process_name: NuCCAnalyser
-
 source:
 {
   module_type: RootInput
   maxEvents:  -1
-  saveMemoryObjectThreshold: 0
+  fileNames: []
+  #saveMemoryObjectThreshold: 0
 }
 
 outputs:
@@ -107,4 +147,3 @@ outputs:
    saveMemoryObjectThreshold: 0
  }
 }
-
