@@ -24,7 +24,8 @@ woutervdp@g.harvard.edu
 
 ### Setup instructions
 
-```setup uboonecode v08_00_00_12 -q e17:prof
+```
+setup uboonecode v08_00_00_12 -q e17:prof
 mrb newDev
 mrbsetenv
 ```
