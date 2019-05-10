@@ -187,7 +187,6 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
     fTrackMCS_mom = mcsMu.fwdMomentum();
     fTrackMCS_err = mcsMu.fwdMomUncertainty();
     fTrackMCS_ll = mcsMu.fwdLogLikelihood();
-    std::cout << "[NuCC::FillDaughters] " << "fTrackMCS_mom" << fTrackMCS_mom << std::endl;
   }
 
   // Shower-like fields

@@ -30,11 +30,9 @@ art_make(
 			            cetlib cetlib_except
                         ${Boost_SYSTEM_LIBRARY}
                         ${ROOT_BASIC_LIB_LIST}
-                        CosmicHelpers
+                        CRT
+                        CRTAna
           )
-
-add_subdirectory(job)
-add_subdirectory(helpers)
 
 install_headers()
 install_source()
