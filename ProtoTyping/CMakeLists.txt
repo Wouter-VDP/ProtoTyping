@@ -1,5 +1,3 @@
 add_subdirectory(CosmicStudies)
-add_subdirectory(CRTstudies)
-add_subdirectory(NueCC)
+add_subdirectory(NuCC)
 add_subdirectory(job)
-add_subdirectory(searchingfornues)
