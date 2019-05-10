@@ -38,7 +38,7 @@ ShrReco3DPandora.ProtoShowerTool:
 
 nuecc_analyser :
 {
-    module_type: "NueCC"
+    module_type: "NuCC"
 
     # Input producers
     pfp_producer:              "pandoraSliceId"
@@ -87,7 +87,7 @@ services.SpaceCharge.EnableSimSpatialSCE: true
 services.DetectorClocksService.InheritClockConfig:                         false
 services.DetectorClocksService.TriggerOffsetTPC:                          -0.400e3
 
-process_name: NueCCAnalyser
+process_name: NuCCAnalyser
 
 source:
 {

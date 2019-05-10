@@ -30,7 +30,7 @@ art_make(
 			            cetlib cetlib_except
                         ${Boost_SYSTEM_LIBRARY}
                         ${ROOT_BASIC_LIB_LIST}
-                        NueCCHelpers
+                        NuCCHelpers
           )
 
 add_subdirectory(job)

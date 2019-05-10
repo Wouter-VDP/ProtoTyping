@@ -1,6 +1,6 @@
-#include "NueCC.h"
+#include "NuCC.h"
 
-void NueCC::endSubRun(const art::SubRun &subrun)
+void NuCC::endSubRun(const art::SubRun &subrun)
 {
   if (!m_isData)
   {
@@ -14,7 +14,7 @@ void NueCC::endSubRun(const art::SubRun &subrun)
   fSubrunTree->Fill();
 }
 
-void NueCC::analyze(art::Event const &evt)
+void NuCC::analyze(art::Event const &evt)
 {
   clearEvent();
   fRun = evt.run();
@@ -23,19 +23,19 @@ void NueCC::analyze(art::Event const &evt)
   art::Timestamp evtTime = evt.time();
   fTimeHigh = evtTime.timeHigh();
   fTimeLow = evtTime.timeLow();
-  std::cout << "[NueCC::analyze]: Run " << fRun << ", Subrun " << fSubrun << ", Event " << fEvent << std::endl;
-  //std::cout << "[NueCC::analyze]: evt_time_sec " << evtTime.timeHigh() << ", evt_time_nsec " << evtTime.timeLow() << std::endl;
+  std::cout << "[NuCC::analyze]: Run " << fRun << ", Subrun " << fSubrun << ", Event " << fEvent << std::endl;
+  //std::cout << "[NuCC::analyze]: evt_time_sec " << evtTime.timeHigh() << ", evt_time_nsec " << evtTime.timeLow() << std::endl;
 
   larpandora.CollectPFParticleMetadata(evt, m_pfp_producer, pfparticles, particlesToMetadata);
   larpandora.BuildPFParticleMap(pfparticles, particleMap);
 
   if (pfparticles.size() == 0)
-    std::cout << "[NueCC::FillReconstructed] No reconstructed PFParticles in event." << std::endl;
+    std::cout << "[NuCC::FillReconstructed] No reconstructed PFParticles in event." << std::endl;
   else
   {
     larpandora.SelectNeutrinoPFParticles(pfparticles, pfneutrinos);
     if (pfneutrinos.size() != 1)
-      std::cout << "[NueCC::FillReconstructed] Number of reconstructed neutrinos in event is " << pfneutrinos.size() << std::endl;
+      std::cout << "[NuCC::FillReconstructed] Number of reconstructed neutrinos in event is " << pfneutrinos.size() << std::endl;
     else // We have a reconstructed neutrino
     {
       if (!m_isData)
@@ -51,7 +51,7 @@ void NueCC::analyze(art::Event const &evt)
   std::cout << "\n\n";
 }
 
-void NueCC::FillReconstructed(art::Event const &evt)
+void NuCC::FillReconstructed(art::Event const &evt)
 {
   fNumPfp = pfparticles.size();
   // Load associations and collections
@@ -75,7 +75,7 @@ void NueCC::FillReconstructed(art::Event const &evt)
   lar_pandora::VertexVector neutrino_vertex_vec = particlesToVertices.at(pfnu);
   if (neutrino_metadata_vec.size() != 1 || neutrino_vertex_vec.size() != 1)
   {
-    std::cout << "[NueCC::FillReconstructed] Neutrino association problem." << std::endl;
+    std::cout << "[NuCC::FillReconstructed] Neutrino association problem." << std::endl;
   }
   else
   {
@@ -93,7 +93,7 @@ void NueCC::FillReconstructed(art::Event const &evt)
   }
   pandoraInterfaceHelper.CollectDownstreamPFParticles(particleMap, pfnu, pfdaughters);
   fNumDaughters = pfdaughters.size() - 1; // The neutrino itself is included here.
-  std::cout << "[NueCC::FillReconstructed] neutrino PDG: " << fNu_PDG << ", Primary Daughters: " << fNumPrimaryDaughters;
+  std::cout << "[NuCC::FillReconstructed] neutrino PDG: " << fNu_PDG << ", Primary Daughters: " << fNumPrimaryDaughters;
   std::cout << ", Daughters: " << fNumDaughters << ", TopoScore: " << fNu_Score;
   std::cout << ", TrueNu_VtxDistance: " << fTrueNu_VtxDistance << std::endl;
 
@@ -115,7 +115,7 @@ void NueCC::FillReconstructed(art::Event const &evt)
   }
 }
 
-bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
+bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
 {
   clearDaughter();
   const lar_pandora::ClusterVector cluster_vec = particlesToClusters.at(pfp);
@@ -138,7 +138,7 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
   if (particlesToSpacePoints.find(pfp) == particlesToSpacePoints.end())
   {
     // If a daughter has no associated spacepoints, count the hits to contribute to the total, but dont save the daughter
-    std::cout << "[NueCC::FillDaughters] Daughter had no associated spacepoints." << std::endl;
+    std::cout << "[NuCC::FillDaughters] Daughter had no associated spacepoints." << std::endl;
     return false;
   }
   fNSpacepoints = particlesToSpacePoints.at(pfp).size();
@@ -147,13 +147,13 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
   if (particlesToVertices.find(pfp) == particlesToVertices.end())
   {
     // If a daughter has no associated vertex, count the hits to contribute to the total, but dont save the daughter
-    std::cout << "[NueCC::FillDaughters] Daughter had no associated vertex." << std::endl;
+    std::cout << "[NuCC::FillDaughters] Daughter had no associated vertex." << std::endl;
     return false;
   }
 
   if (particlesToMetadata.at(pfp).size() != 1 || particlesToVertices.at(pfp).size() != 1)
   {
-    std::cout << "[NueCC::FillDaughters] Daughter association problem." << std::endl;
+    std::cout << "[NuCC::FillDaughters] Daughter association problem." << std::endl;
     return false;
   }
   const recob::Vertex::Point_t &pfp_vtx = particlesToVertices.at(pfp).front()->position();
@@ -179,7 +179,7 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
     fTrackEndX = this_track->End().X();
     fTrackEndY = this_track->End().Y();
     fTrackEndZ = this_track->End().Z();
-    //std::cout << "[NueCC::FillDaughters] HasMomentum: " << this_track->HasMomentum() << ", ParticleId: " << this_track->ParticleId() << std::endl;
+    //std::cout << "[NuCC::FillDaughters] HasMomentum: " << this_track->HasMomentum() << ", ParticleId: " << this_track->ParticleId() << std::endl;
   }
 
   // Shower-like fields
@@ -215,7 +215,7 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
     }
     else
     {
-      std::cout << "[NueCC::FillDaughters] Bad shower, no length or opening angle!" << std::endl;
+      std::cout << "[NuCC::FillDaughters] Bad shower, no length or opening angle!" << std::endl;
     }
   }
 
@@ -238,15 +238,15 @@ bool NueCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp)
       }
     }
   }
-  std::cout << "[NueCC::FillDaughters] Trackscore: " << fTrackScore << ", Generation: " << fGeneration;
+  std::cout << "[NuCC::FillDaughters] Trackscore: " << fTrackScore << ", Generation: " << fGeneration;
   std::cout << ", vtx distance: " << fVtxDistance << std::endl;
-  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsU << ", Energy: " << fCaloU << ", dedx hits: " << fDedxHitsU << ", dedx: " << fDedxU << ", pitch: " << fDedxPitchU << std::endl;
-  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsV << ", Energy: " << fCaloV << ", dedx hits: " << fDedxHitsV << ", dedx: " << fDedxV << ", pitch: " << fDedxPitchV << std::endl;
-  std::cout << "[NueCC::FillDaughters] U Plane: Hits:" << fNhitsY << ", Energy: " << fCaloY << ", dedx hits: " << fDedxHitsY << ", dedx: " << fDedxY << ", pitch: " << fDedxPitchY << std::endl;
+  std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsU << ", Energy: " << fCaloU << ", dedx hits: " << fDedxHitsU << ", dedx: " << fDedxU << ", pitch: " << fDedxPitchU << std::endl;
+  std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsV << ", Energy: " << fCaloV << ", dedx hits: " << fDedxHitsV << ", dedx: " << fDedxV << ", pitch: " << fDedxPitchV << std::endl;
+  std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsY << ", Energy: " << fCaloY << ", dedx hits: " << fDedxHitsY << ", dedx: " << fDedxY << ", pitch: " << fDedxPitchY << std::endl;
   return true;
 }
 
-bool NueCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp)
+bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp)
 {
   if (m_isData)
     return false;
@@ -262,7 +262,7 @@ bool NueCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticl
     // Generation 3 particle get matched to its parent.
     const auto iter(particleMap.find(pfp->Parent()));
     if (iter == particleMap.end())
-      throw cet::exception("NueCC::MatchDaughter") << "Scrambled PFParticle IDs" << std::endl;
+      throw cet::exception("NuCC::MatchDaughter") << "Scrambled PFParticle IDs" << std::endl;
     const art::Ptr<recob::PFParticle> &pfp_parent = iter->second;
 
     if (matchedParticles.find(pfp_parent) == matchedParticles.end())
@@ -271,7 +271,7 @@ bool NueCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticl
   }
   else
   {
-    std::cout << "[NueCC::MatchDaughter] Generation 4 particle is not matched." << std::endl;
+    std::cout << "[NuCC::MatchDaughter] Generation 4 particle is not matched." << std::endl;
     return false;
   }
 
@@ -296,24 +296,24 @@ bool NueCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticl
     fTrueVz = matched_mcp->Vz();
     pandoraInterfaceHelper.SCE(fTrueVx, fTrueVy, fTrueVz, matched_mcp->T(),
                                fTrueVxSce, fTrueVySce, fTrueVzSce);
-    std::cout << "[NueCC::MatchDaughter] Daughter matched with PDG: " << fTruePDG << ", neutrino origin: " << fMatchedNeutrino << std::endl;
+    std::cout << "[NuCC::MatchDaughter] Daughter matched with PDG: " << fTruePDG << ", neutrino origin: " << fMatchedNeutrino << std::endl;
   }
   return true;
 }
 
-void NueCC::FillTrueNu(art::Event const &evt)
+void NuCC::FillTrueNu(art::Event const &evt)
 {
   if (m_hasMCNeutrino)
   {
     auto const &generator_handle = evt.getValidHandle<std::vector<simb::MCTruth>>("generator");
     auto const &generator(*generator_handle);
     fNumNu = generator.size();
-    std::cout << "[NueCC::FillTrueNu] True neutrinos found: " << fNumNu;
+    std::cout << "[NuCC::FillTrueNu] True neutrinos found: " << fNumNu;
     if (generator.size() > 0)
     {
       if (generator.front().Origin() != simb::kBeamNeutrino)
       {
-        std::cout << "[NueCC::FillTrueNu] Origin of generator particle is not kBeamNeutrino." << std::endl;
+        std::cout << "[NuCC::FillTrueNu] Origin of generator particle is not kBeamNeutrino." << std::endl;
         return;
       }
       const simb::MCNeutrino &mcnu = generator.front().GetNeutrino();
@@ -335,7 +335,7 @@ void NueCC::FillTrueNu(art::Event const &evt)
   }
 }
 
-void NueCC::FillTrueNuDaughters(art::Event const &evt)
+void NuCC::FillTrueNuDaughters(art::Event const &evt)
 {
   lar_pandora::MCParticleVector mcparticles;
   larpandora.CollectMCParticles(evt, m_geant_producer, mcparticles);
@@ -370,21 +370,21 @@ void NueCC::FillTrueNuDaughters(art::Event const &evt)
         }
       }
       fTrueNu_DaughterMatched.push_back(daughter_matched_neutrino_pfp);
-      std::cout << "[NueCC::FillTrueNuDaughters] << PDG: " << mcparticle->PdgCode() << ", E: " << mcparticle->E() << ", was matched? " << fTrueNu_DaughterMatched.back() << std::endl;
+      std::cout << "[NuCC::FillTrueNuDaughters] << PDG: " << mcparticle->PdgCode() << ", E: " << mcparticle->E() << ", was matched? " << fTrueNu_DaughterMatched.back() << std::endl;
     }
   }
 }
 
-void NueCC::FillReconTruthMatching(art::Event const &evt)
+void NuCC::FillReconTruthMatching(art::Event const &evt)
 {
   pandoraInterfaceHelper.Configure(evt, m_pfp_producer, m_pfp_producer, m_hitfinder_producer, m_geant_producer, m_hit_mcp_producer);
   pandoraInterfaceHelper.GetRecoToTrueMatches(matchedParticles);
-  std::cout << "[NueCC::FillReconTruthMatching] ";
+  std::cout << "[NuCC::FillReconTruthMatching] ";
   std::cout << "Number of PFPparticles in event: " << pfparticles.size() << std::endl;
   for (auto it = matchedParticles.begin(); it != matchedParticles.end(); ++it)
   {
     matchedMCParticles.insert(it->second);
   }
-  std::cout << "[NueCC::FillReconTruthMatching] ";
+  std::cout << "[NuCC::FillReconTruthMatching] ";
   std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
 }

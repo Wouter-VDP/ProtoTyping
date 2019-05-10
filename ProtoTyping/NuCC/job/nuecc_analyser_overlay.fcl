@@ -1,4 +1,4 @@
-#include "nuecc_analyser_common.fcl"
+#include "nucc_analyser_common.fcl"
 
 physics:
 {
@@ -28,7 +28,7 @@ physics:
  
  analyzers: 
  {
-    nueCCAnalyser:                    @local::nuecc_analyser
+    nuCCAnalyser:                    @local::nucc_analyser
  }
 
  prod: [crtsimhitcorr, 
@@ -42,7 +42,7 @@ physics:
         #pandoracalipidSCE,
         #shrreco3d]
         
- ana:  [nueCCAnalyser]
+ ana:  [nuCCnalyser]
 
  trigger_paths: [ prod ]
  end_paths: [ ana ]
@@ -96,5 +96,5 @@ physics.producers.pandoracalipidSCE.ProducerLabels.CalorimetryLabel: "pandoracal
 
 physics.producers.shrreco3d.ADCtoE: [245,252,248.2] # e-/ADC
 
-physics.analyzers.nueCCAnalyser.is_data:                                     false
-physics.analyzers.nueCCAnalyser.has_MC_neutrino:                             true
+physics.analyzers.nuCCnalyser.is_data:                                     false
+physics.analyzers.nuCCnalyser.has_MC_neutrino:                             true
