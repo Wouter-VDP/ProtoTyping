@@ -31,10 +31,12 @@ art_make(
                         ${Boost_SYSTEM_LIBRARY}
                         ${ROOT_BASIC_LIB_LIST}
                         CosmicHelpers
+                        CRT
+                        ##CRTAna
           )
 
 add_subdirectory(job)
-add_subdirectory(helpers)
+##add_subdirectory(helpers)
 
 install_headers()
 install_source()

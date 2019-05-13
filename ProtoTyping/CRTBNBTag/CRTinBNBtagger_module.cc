@@ -32,7 +32,7 @@
 //#include "larpandora/LArPandoraObjects/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
 
-#include "ubcrt/CRTXSEC/CRTAnaFun.hh"
+//#include "ubcrt/CRTXSEC/CRTAnaFun.hh"
 //#include "ubcrt/CRTXSEC/BackTrackerTruthMatch.h"
 #include "ubobj/CRT/CRTHit.hh"
 #include "ubobj/CRT/CRTTrack.hh"
@@ -124,14 +124,14 @@ private:
     
     void initialize_tmyevent();
     void reset_tree();
-    
+    /*
     void CollectPFParticles(const art::Event &evt, PFParticleToMetadata &particlesToMetadata, PFParticleVector &particles) const;
     void BuildPFParticleMap(const PFParticleToMetadata &particlesToMetadata, PFParticleMap &particleMap) const;
     void CollectClearCosmicRays(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, PFParticleVector &clearCosmics) const;
     void CollectSlices(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, SliceVector &slices) const;
     void CollectConsolidatedParticles(const PFParticleVector &allParticles, const PFParticleVector &clearCosmics, const SliceVector &slices, PFParticleVector &consolidatedParticles) const;
     float GetMetadataValue(const art::Ptr<larpandoraobj::PFParticleMetadata> &metadata, const std::string &key) const;
-
+    */
     
     int verbose_;
     int saveTTree_ = 0;
@@ -216,13 +216,13 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
   
   PFParticleVector particles;
   PFParticleToMetadata particlesToMetadata;
-  this->CollectPFParticles(evt, particlesToMetadata, particles);
+  this->LArPandoraHelper::CollectPFParticles(evt, particlesToMetadata, particles);
 
   PFParticleMap particleMap;
-  this->BuildPFParticleMap(particlesToMetadata, particleMap);
+  this->LArPandoraHelper::BuildPFParticleMap(particlesToMetadata, particleMap);
   
   SliceVector slices;
-  this->CollectSlices(particles, particlesToMetadata, particleMap, slices);
+  this->LArPandoraHelper::CollectSlices(particles, particlesToMetadata, particleMap, slices);
   //std::cout << "################Her I am...#################################" << std::endl;
   //m_neutrinoIdTool->ClassifySlicesCRTHit(slices, evt, m_crthitLabel);
   // tag neutrino candidates ///////////////////////////////////////////
@@ -249,7 +249,8 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
       has_nuslice = 1;
       std::vector< art::Ptr<recob::Track> > tracks_slice;
       std::vector< art::Ptr<recob::Shower> > showers_slice;
-      crtana::auxfunc::CollectTracksAndShowers(nu_pfparticle, pfParticleHandle, evt, tracks_slice, showers_slice, m_trackProducerLabel, m_showerProducerLabel);
+      //crtana::auxfunc::CollectTracksAndShowers(nu_pfparticle, pfParticleHandle, evt, tracks_slice, showers_slice, m_trackProducerLabel, m_showerProducerLabel);
+      LArPandoraHelper::CollectTracksAndShowers(nu_pfparticle, pfParticleHandle, evt, tracks_slice, showers_slice, m_trackProducerLabel, m_showerProducerLabel);
       int max_track_nr = tracks_slice.size();
       int max_shower_nr = showers_slice.size();
       if(verbose_ !=0 )std::cout << "Track and Shower multiplicity: " << max_track_nr  << " - " << max_shower_nr << std::endl;
@@ -467,6 +468,7 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
     evt.put(std::move(T0_collection));
   
 }
+/*
 void CRTinBNBtaggerProducer::CollectPFParticles(const art::Event &evt, PFParticleToMetadata &particlesToMetadata, PFParticleVector &particles) const
 {
     if(verbose_>1) std::cout << "Enter CollectPFParticles function" << std::endl;
@@ -630,7 +632,7 @@ void CRTinBNBtaggerProducer::CollectConsolidatedParticles(const PFParticleVector
             consolidatedParticles.push_back(part);
     }
 }
-
+*/
 //------------------------------------------------------------------------------------------------------
 void CRTinBNBtaggerProducer::initialize_tmyevent()
 {

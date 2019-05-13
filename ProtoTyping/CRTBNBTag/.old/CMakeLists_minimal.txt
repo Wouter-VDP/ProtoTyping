@@ -1,12 +1,13 @@
 art_make( 
           # Needed for standalone c++ helper files
           LIB_LIBRARIES 
-
+                        larcorealg_Geometry
+                        larcore_Geometry_Geometry_service
+                        
           # Needed for the main module          
           MODULE_LIBRARIES
                         larpandora_LArPandoraInterface
                         larcorealg_Geometry
-                        larreco_RecoAlg
                         larcore_Geometry_Geometry_service
                         larsim_Simulation lardataobj_Simulation
                         lardataobj_RawData
@@ -30,11 +31,9 @@ art_make(
 			            cetlib cetlib_except
                         ${Boost_SYSTEM_LIBRARY}
                         ${ROOT_BASIC_LIB_LIST}
-                        CosmicHelpers
           )
 
 add_subdirectory(job)
-add_subdirectory(helpers)
 
 install_headers()
 install_source()
