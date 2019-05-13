@@ -23,6 +23,8 @@ physics:
     
     # Shower Reco module
     shrreco3d:                        @local::ShrReco3DPandora
+    
+    bnbcrttag:                        @local::crtinbeam
  }
  
  analyzers: 
@@ -38,14 +40,15 @@ physics:
         pandoracaloSCE,
         pandoracaliSCE,
         pandoracalipidSCE,
-        shrreco3d]
+        shrreco3d,
+        bnbcrttag]
         
  ana:  [nuCCAnalyser]
 
  trigger_paths: [ prod ]
  end_paths: [ ana ]
 
-
+}
 physics.producers.crthitcorr.CrtHitsIn_Label1: "merger"
 
 physics.producers.pandoraSliceId.SliceIdTool.HasMCNeutrino: false
