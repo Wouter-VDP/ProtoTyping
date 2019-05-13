@@ -80,8 +80,8 @@ private:
     double fTriTim_sec = 0;          //event trigger time sec
     double fTriTim_nsec = 0;          //event trigger time ns
     
-    unsigned int fTimeHigh = 0;
-    unsigned int fTimeLow = 0;
+    UInt_t fTimeHigh = 0;
+    UInt_t fTimeLow = 0;
     
     double fAbsTimFla = 0;
     double flash_PE = 0;
