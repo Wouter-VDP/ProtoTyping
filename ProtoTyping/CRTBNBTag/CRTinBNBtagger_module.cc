@@ -5,7 +5,6 @@
  */
 
 #include "art/Framework/Core/EDProducer.h"
-//#include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
 #include "art/Framework/Principal/Event.h"
 #include "art/Framework/Principal/Handle.h"
@@ -16,24 +15,14 @@
 #include "canvas/Utilities/InputTag.h"
 #include "canvas/Persistency/Common/FindOneP.h"
 #include "fhiclcpp/ParameterSet.h"
-//#include "lardata/Utilities/AssociationUtil.h"
-//#include "ubcrt/CRTXSEC/CRTAnaFun.hh"
-
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "art/Framework/Services/Optional/TFileService.h"
 
 #include "larpandora/LArPandoraInterface/LArPandoraHelper.h"
 #include "larpandora/LArPandoraEventBuilding/Slice.h"
-//#include "larpandora/LArPandoraEventBuilding/NeutrinoIdBaseTool.h"
-//#include "ubcrt/CRTXSEC/CRTNeutrinoIdBaseTool.h"
 #include "larpandora/LArPandoraEventBuilding/LArPandoraEvent.h"
-
-//#include "lardataobj/RecoBase/PFParticle.h"
-//#include "larpandora/LArPandoraObjects/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
 
-//#include "ubcrt/CRTXSEC/CRTAnaFun.hh"
-//#include "ubcrt/CRTXSEC/BackTrackerTruthMatch.h"
 #include "ubobj/CRT/CRTHit.hh"
 #include "ubobj/CRT/CRTTrack.hh"
 #include "ubobj/CRT/CRTTzero.hh"
@@ -42,14 +31,10 @@
 
 #include "lardataobj/RecoBase/Track.h"                                                                
 #include "lardataobj/RecoBase/Hit.h"     
-//#include "lardataobj/RecoBase/MCSFitResult.h"
-//#include "larreco/RecoAlg/TrajectoryMCSFitter.h"
 #include "lardataobj/AnalysisBase/T0.h" 
 #include "lardataobj/AnalysisBase/ParticleID.h" 
 #include "lardataobj/AnalysisBase/CosmicTag.h"                                                        
-#include "lardataobj/AnalysisBase/Calorimetry.h"   
-//#include "lardataobj/AnalysisBase/BackTrackerMatchingData.h" // backtracker class
-//#include "lardataobj/MCBase/MCTrack.h"                                                                
+#include "lardataobj/AnalysisBase/Calorimetry.h"                                                                 
 #include "lardataobj/RecoBase/OpFlash.h"                                                              
 #include "lardata/Utilities/AssociationUtil.h"
 #include "lardataobj/RecoBase/PFParticle.h"
@@ -124,14 +109,6 @@ private:
     
     void initialize_tmyevent();
     void reset_tree();
-    /*
-    void CollectPFParticles(const art::Event &evt, PFParticleToMetadata &particlesToMetadata, PFParticleVector &particles) const;
-    void BuildPFParticleMap(const PFParticleToMetadata &particlesToMetadata, PFParticleMap &particleMap) const;
-    void CollectClearCosmicRays(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, PFParticleVector &clearCosmics) const;
-    void CollectSlices(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, SliceVector &slices) const;
-    void CollectConsolidatedParticles(const PFParticleVector &allParticles, const PFParticleVector &clearCosmics, const SliceVector &slices, PFParticleVector &consolidatedParticles) const;
-    float GetMetadataValue(const art::Ptr<larpandoraobj::PFParticleMetadata> &metadata, const std::string &key) const;
-    */
     
     int verbose_;
     int saveTTree_ = 0;
@@ -223,9 +200,6 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
   
   SliceVector slices;
   this->LArPandoraHelper::CollectSlices(particles, particlesToMetadata, particleMap, slices);
-  //std::cout << "################Her I am...#################################" << std::endl;
-  //m_neutrinoIdTool->ClassifySlicesCRTHit(slices, evt, m_crthitLabel);
-  // tag neutrino candidates ///////////////////////////////////////////
   int max_slice = slices.size();
   if(verbose_!=0) std::cout << "Number of Slices: " << max_slice << std::endl;
   
@@ -239,7 +213,6 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
   art::FindMany<anab::T0> trk_T0_assn_v(rawHandle_TPCtrack, evt, data_label_crtT0asso_);
   
   for(unsigned int sliceIndex = 0; sliceIndex < slices.size(); sliceIndex++){
-    //if( slices.at(sliceIndex).IsTaggedAsTarget () ){
     PFParticleVector nu_pfparticle;
     nu_pfparticle = slices.at(sliceIndex).GetTargetHypothesis();
     PFParticleVector outputParticles;
@@ -249,7 +222,6 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
       has_nuslice = 1;
       std::vector< art::Ptr<recob::Track> > tracks_slice;
       std::vector< art::Ptr<recob::Shower> > showers_slice;
-      //crtana::auxfunc::CollectTracksAndShowers(nu_pfparticle, pfParticleHandle, evt, tracks_slice, showers_slice, m_trackProducerLabel, m_showerProducerLabel);
       LArPandoraHelper::CollectTracksAndShowers(nu_pfparticle, pfParticleHandle, evt, tracks_slice, showers_slice, m_trackProducerLabel, m_showerProducerLabel);
       int max_track_nr = tracks_slice.size();
       int max_shower_nr = showers_slice.size();
@@ -468,171 +440,7 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
     evt.put(std::move(T0_collection));
   
 }
-/*
-void CRTinBNBtaggerProducer::CollectPFParticles(const art::Event &evt, PFParticleToMetadata &particlesToMetadata, PFParticleVector &particles) const
-{
-    if(verbose_>1) std::cout << "Enter CollectPFParticles function" << std::endl;
-    art::Handle<std::vector<recob::PFParticle> > pfParticleHandle;
-    evt.getByLabel(m_pandoraTag, pfParticleHandle);
 
-    art::FindManyP<larpandoraobj::PFParticleMetadata> pfParticleMetadataAssoc(pfParticleHandle, evt, m_pandoraTag);
-  
-    for (unsigned int i = 0; i < pfParticleHandle->size(); ++i)
-    {
-        const art::Ptr<recob::PFParticle> part(pfParticleHandle, i);
-        const auto &metadata(pfParticleMetadataAssoc.at(part.key()));
-
-        particles.push_back(part);
-
-        if (metadata.size() != 1) 
-            throw cet::exception("LArPandora") << " CRTinBNBtaggerProducer::CollectPFParticles -- Found a PFParticle without exactly 1 metadata associated." << std::endl;
-
-        if (!particlesToMetadata.insert(PFParticleToMetadata::value_type(part, metadata.front())).second)
-            throw cet::exception("CRTinBNBtaggerProducer") << "Repeated PFParticles" << std::endl;
-    }
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-void CRTinBNBtaggerProducer::BuildPFParticleMap(const PFParticleToMetadata &particlesToMetadata, PFParticleMap &particleMap) const
-{
-    if(verbose_>1) std::cout << "Enter BuildPFParticleMap function" << std::endl;
-    for (const auto &entry : particlesToMetadata)
-    {
-        if (!particleMap.insert(PFParticleMap::value_type(entry.first->Self(), entry.first)).second)
-            throw cet::exception("CRTinBNBtaggerProducer") << "Repeated PFParticles" << std::endl;
-    }
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-void CRTinBNBtaggerProducer::CollectClearCosmicRays(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, PFParticleVector &clearCosmics) const
-{
-    if(verbose_>1) std::cout << "Enter CollectClearCosmicRays function" << std::endl;
-    for (const auto &part : allParticles)
-    {
-        // Get the parent of the particle
-        const auto parentIt(particlesToMetadata.find(LArPandoraHelper::GetParentPFParticle(particleMap, part)));
-        if (parentIt == particlesToMetadata.end())
-            throw cet::exception("CRTinBNBtaggerProducer") << "Found PFParticle without metadata" << std::endl;
-
-        // ATTN particles without the "IsClearCosmic" parameter are not clear cosmics
-        try
-        {
-            if (static_cast<bool>(std::round(this->GetMetadataValue(parentIt->second, "IsClearCosmic"))))
-                clearCosmics.push_back(part);
-        }
-        catch (const cet::exception &)
-        {
-        }
-    }
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-void CRTinBNBtaggerProducer::CollectSlices(const PFParticleVector &allParticles, const PFParticleToMetadata &particlesToMetadata, const PFParticleMap &particleMap, SliceVector &slices) const
-{
-    if(verbose_>1) std::cout << "Enter CollectSlices function" << std::endl;
-    std::map<unsigned int, float> nuScores;
-    std::map<unsigned int, PFParticleVector> crHypotheses;
-    std::map<unsigned int, PFParticleVector> nuHypotheses;
-
-    // Collect the slice information
-    for (const auto &part : allParticles)
-    {
-        // Find the parent PFParticle
-        const auto parentIt(particlesToMetadata.find(LArPandoraHelper::GetParentPFParticle(particleMap, part)));
-        if (parentIt == particlesToMetadata.end())
-            throw cet::exception("ConsolidatedOutputAnalyserSlices_module") << "Found PFParticle without metadata" << std::endl;
-       
-        // Skip PFParticles that are clear cosmics
-        try
-        {
-            if (static_cast<bool>(std::round(this->GetMetadataValue(parentIt->second, "IsClearCosmic"))))
-                continue;
-        }
-        catch (const cet::exception &)
-        {
-        }
-
-        const unsigned int sliceId(static_cast<unsigned int>(std::round(this->GetMetadataValue(parentIt->second, "SliceIndex"))));
-        const float nuScore(this->GetMetadataValue(parentIt->second, "NuScore"));
-        // ATTN all PFParticles in the same slice will have the same nuScore
-        nuScores[sliceId] = nuScore;
-
-        if (LArPandoraHelper::IsNeutrino(parentIt->first))
-        {
-            nuHypotheses[sliceId].push_back(part);
-        }
-        else 
-        {
-            crHypotheses[sliceId].push_back(part);
-        }
-    }
-
-    // ATTN: we need to ensure that for each slice there is a cosmic and neutrino hypothesis, even if the pass created no PFOs
-    // in such a case we add an empty vector of pfparticles
-    const PFParticleVector emptyPFParticleVector;
-
-    // Produce the slices
-  
-    for (unsigned int sliceId = 1; sliceId <= nuScores.size(); sliceId++)
-    {
-        // Get the neutrino score
-        const auto nuScoresIter(nuScores.find(sliceId));
-        if (nuScoresIter == nuScores.end()){}
-            //throw cet::exception("CRTinBNBtaggerProducer") << "Scrambled slice information - can't find nuScore with id = " << sliceId << std::endl;
-
-        PFParticleVector nuPFParticleVector, crPFParticleVector;
-        // Get the neutrino hypothesis
-        const auto nuHypothesisIter(nuHypotheses.find(sliceId));
-        nuPFParticleVector = ((nuHypothesisIter == nuHypotheses.end()) ? emptyPFParticleVector : nuHypothesisIter->second);
-
-        // Get the cosmic hypothesis
-        const auto crHypothesisIter(crHypotheses.find(sliceId));
-        crPFParticleVector = ((crHypothesisIter == crHypotheses.end()) ? emptyPFParticleVector : crHypothesisIter->second);
-
-        slices.emplace_back(nuScoresIter->second, nuPFParticleVector, crPFParticleVector);
-    }
-}
-
-//------------------------------------------------------------------------------------------------------------------------------------------
-
-float CRTinBNBtaggerProducer::GetMetadataValue(const art::Ptr<larpandoraobj::PFParticleMetadata> &metadata, const std::string &key) const
-{
-    if(verbose_>1) std::cout << "Enter GetMetadataValue function" << std::endl;
-    const auto &propertiesMap(metadata->GetPropertiesMap());
-    const auto &it(propertiesMap.find(key));
-
-    if (it == propertiesMap.end())
-        throw cet::exception("CRTinBNBtaggerProducer") << "No key \"" << key << "\" found in metadata properties map" << std::endl;
-
-    return it->second;
-}
-
-//-----------------------------art::Assns<recob::Track,anab::T0,void>-------------------------------------------------------------------------------------------------------------
-
-void CRTinBNBtaggerProducer::CollectConsolidatedParticles(const PFParticleVector &allParticles, const PFParticleVector &clearCosmics, const SliceVector &slices, PFParticleVector &consolidatedParticles) const
-{
-    if(verbose_>1) std::cout << "Enter CollectConsolidatedParticles function" << std::endl;
-    PFParticleVector collectedParticles;
-    collectedParticles.insert(collectedParticles.end(), clearCosmics.begin(), clearCosmics.end());
-
-    for (const auto &slice : slices)
-    {
-        const PFParticleVector &particles(slice.IsTaggedAsTarget() ? slice.GetTargetHypothesis() : slice.GetCosmicRayHypothesis());
-        collectedParticles.insert(collectedParticles.end(), particles.begin(), particles.end());
-    }
-
-    // ATTN the collected partiart::Assns<recob::Track,anab::T0,void>cles are the ones we want to output, but here we loop over all particles to ensure that the consolidated 
-    // particles have the same ordering.
-    for (const auto &part : allParticles)
-    {
-        if (std::find(collectedParticles.begin(), collectedParticles.end(), part) != collectedParticles.end())
-            consolidatedParticles.push_back(part);
-    }
-}
-*/
 //------------------------------------------------------------------------------------------------------
 void CRTinBNBtaggerProducer::initialize_tmyevent()
 {
@@ -711,11 +519,9 @@ void CRTinBNBtaggerProducer::beginJob()
 {
   // Implementation of optional member function here.
   std::cout << "Starting Neutrino CRT producer module" << std::endl;
-  //initialize_tpandora();
   initialize_tmyevent();
   std::cout << "-------Using the following fcl parameters:-------" << std::endl;
   std::cout << "Pandora label:\t\t" << m_inputProducerLabel << std::endl;
-  //std::cout << "Track label:\t\t" << m_inputProducerLabel << std::endl;
   std::cout << "CRT T0 asso label:\t" << data_label_crtT0asso_ << std::endl;
   std::cout << "Beam flash label:\t" << data_label_flash_beam_ << std::endl;
   std::cout << "CRT hit label:\t\t" << data_label_crthit_ << std::endl;
@@ -731,8 +537,6 @@ void CRTinBNBtaggerProducer::beginJob()
   std::cout << "store_t0:\t\t\t" << store_t0_ << std::endl;
   std::cout << "t0_crt_window:\t\t\t" << t0_crt_window << std::endl;
   std::cout << "------------end fcl parameters-------------------" << std::endl;
-  //initialize_tmy_hitasso();
-  //std::cout << "crthitmatch_ = " << crthitmatch_ << std::endl;
 
 }
 void CRTinBNBtaggerProducer::endJob()
