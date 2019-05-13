@@ -24,7 +24,7 @@ physics:
     # Shower Reco module
     shrreco3d:                        @local::ShrReco3DPandora
     
-    #bnbcrttag:                        @local::crtinbeam
+    bnbcrttag:                        @local::crtinbeam
  }
  
  analyzers: 
@@ -40,8 +40,8 @@ physics:
         pandoracaloSCE,
         pandoracaliSCE,
         pandoracalipidSCE,
-        shrreco3d]
-        #bnbcrttag]
+        shrreco3d,
+        bnbcrttag]
         
  ana:  [nuCCAnalyser]
 
