@@ -333,9 +333,9 @@ void NuCC::FillTrueNu(art::Event const &evt)
       fTrueNu_Py = mcnu.Nu().Py();
       fTrueNu_Pz = mcnu.Nu().Pz();
       fTrueNu_LeptonEnergy = mcnu.Lepton().E();
-      fTrueNu_LeptonPx = mcnu.Lepton.Px();
-      fTrueNu_LeptonPy = mcnu.Lepton.Py();
-      fTrueNu_LeptonPz = mcnu.Lepton.Pz();
+      fTrueNu_LeptonPx = mcnu.Lepton().Px();
+      fTrueNu_LeptonPy = mcnu.Lepton().Py();
+      fTrueNu_LeptonPz = mcnu.Lepton().Pz();
       fTrueNu_LeptonTheta = mcnu.Theta();
       fTrueNu_Time = mcnu.Nu().T();
       fTrueNu_Vx = mcnu.Nu().Vx();
