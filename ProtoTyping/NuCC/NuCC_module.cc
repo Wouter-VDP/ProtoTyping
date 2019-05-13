@@ -187,7 +187,6 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
     fTrackMCS_mom = mcsMu.fwdMomentum();
     fTrackMCS_err = mcsMu.fwdMomUncertainty();
     fTrackMCS_ll = mcsMu.fwdLogLikelihood();
-    std::cout << "[NuCC::FillDaughters] " << "fTrackMCS_mom" << fTrackMCS_mom << std::endl;
   }
 
   // Shower-like fields
@@ -330,7 +329,13 @@ void NuCC::FillTrueNu(art::Event const &evt)
       fTrueNu_CCNC = mcnu.CCNC();
       fTrueNu_PDG = mcnu.Nu().PdgCode();
       fTrueNu_Energy = mcnu.Nu().E();
+      fTrueNu_Px = mcnu.Nu().Px();
+      fTrueNu_Py = mcnu.Nu().Py();
+      fTrueNu_Pz = mcnu.Nu().Pz();
       fTrueNu_LeptonEnergy = mcnu.Lepton().E();
+      fTrueNu_LeptonPx = mcnu.Lepton().Px();
+      fTrueNu_LeptonPy = mcnu.Lepton().Py();
+      fTrueNu_LeptonPz = mcnu.Lepton().Pz();
       fTrueNu_LeptonTheta = mcnu.Theta();
       fTrueNu_Time = mcnu.Nu().T();
       fTrueNu_Vx = mcnu.Nu().Vx();

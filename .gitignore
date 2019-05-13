@@ -9,3 +9,4 @@ time.db
 .vscode
 *.out
 ProtoTyping/searchingfornues/
+ProtoTyping/CMakeLists.txt

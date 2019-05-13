@@ -153,7 +153,9 @@ class NuCC : public art::EDAnalyzer
     int fTrueNu_CCNC;
     int fTrueNu_PDG;
     float fTrueNu_Energy;
+    float fTrueNu_LeptonPx, fTrueNu_LeptonPy, fTrueNu_LeptonPz;
     float fTrueNu_LeptonEnergy;
+    float fTrueNu_Px, fTrueNu_Py, fTrueNu_Pz;
     float fTrueNu_LeptonTheta;
     float fTrueNu_Time; // time of the true neutrino interaction
     float fTrueNu_Vx, fTrueNu_Vy, fTrueNu_Vz;
@@ -292,7 +294,13 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
         fEventTree->Branch("mc_nu_vy_sce", &fTrueNu_VySce, "mc_nu_vy_sce/F");
         fEventTree->Branch("mc_nu_vz_sce", &fTrueNu_VzSce, "mc_nu_vz_sce/F");
         fEventTree->Branch("mc_nu_energy", &fTrueNu_Energy, "mc_nu_energy/F");
+        fEventTree->Branch("mc_nu_px", &fTrueNu_Px, "mc_nu_px/F");
+        fEventTree->Branch("mc_nu_py", &fTrueNu_Py, "mc_nu_py/F");
+        fEventTree->Branch("mc_nu_pz", &fTrueNu_Pz, "mc_nu_pz/F");
         fEventTree->Branch("mc_nu_lepton_energy", &fTrueNu_LeptonEnergy, "mc_nu_lepton_energy/F");
+        fEventTree->Branch("mc_nu_lepton_px", &fTrueNu_LeptonPx, "mc_nu_lepton_px/F");
+        fEventTree->Branch("mc_nu_lepton_py", &fTrueNu_LeptonPy, "mc_nu_lepton_py/F");
+        fEventTree->Branch("mc_nu_lepton_pz", &fTrueNu_LeptonPz, "mc_nu_lepton_pz/F");
         fEventTree->Branch("mc_nu_lepton_theta", &fTrueNu_LeptonTheta, "mc_nu_lepton_theta/F");
         fEventTree->Branch("mc_nu_time", &fTrueNu_Time, "mc_nu_time/F");
         fEventTree->Branch("mc_nu_pdg", &fTrueNu_PDG, "mc_nu_pdg/I");
