@@ -80,6 +80,9 @@ private:
     double fTriTim_sec = 0;          //event trigger time sec
     double fTriTim_nsec = 0;          //event trigger time ns
     
+    unsigned int fTimeHigh = 0;
+    unsigned int fTimeLow = 0;
+    
     double fAbsTimFla = 0;
     double flash_PE = 0;
     double flash_y = 0;
@@ -304,6 +307,10 @@ void CRTinBNBtaggerProducer::produce(art::Event &evt)
   fTriTim_sec = evtTimeGPS.timeHigh();
   fTriTim_nsec = evtTimeGPS.timeLow();
   
+  art::Timestamp evtTime = evt.time();
+  fTimeHigh = evtTime.timeHigh();
+  fTimeLow = evtTime.timeLow();
+  
   art::Handle< std::vector<crt::CRTHit> > rawHandle_CRTHit;
   evt.getByLabel(data_label_crthit_, rawHandle_CRTHit); //mergerextra
   std::vector<crt::CRTHit> const& CRTHitCollection(*rawHandle_CRTHit);
@@ -458,6 +465,9 @@ void CRTinBNBtaggerProducer::initialize_tmyevent()
   // DAQ time info
   my_event_->Branch("fTriTim_sec", &fTriTim_sec, "fTriTim_sec s/D");
   my_event_->Branch("fTriTim_nsec", &fTriTim_nsec, "fTriTim_nsec ns/D");
+  
+  my_event_->Branch("evt_time_sec", &fTimeHigh, "evt_time_sec/i");
+  my_event_->Branch("evt_time_nsec", &fTimeLow, "evt_time_nsec/i");
   // Beam flash info
   my_event_->Branch("flash_time", &fAbsTimFla, "flash time us/D");
   my_event_->Branch("flash_PE", &flash_PE, "flash_PE ns/D");
