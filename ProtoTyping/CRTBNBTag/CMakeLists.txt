@@ -35,9 +35,9 @@ art_make(
                         ##CRTAna
           )
 
-add_subdirectory(job)
+##add_subdirectory(job)
 ##add_subdirectory(helpers)
 
-install_headers()
+##install_headers()
 install_source()
 install_fhicl()
