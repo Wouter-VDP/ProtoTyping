@@ -27,8 +27,8 @@
     </larsoft>
 
     <!--  Project stages  -->
-    <stage name="nucc>
-        <fcl>run_nuccanalyser_beamOffData_run3.fcl</fcl>
+    <stage name="nucc">
+        <fcl>run_nucc_analyser_beamOffData_run3.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>

@@ -23,11 +23,11 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_12/srcs/ProtoTyping/ProtoTyping/NuCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_6May.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_12May.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
-    <stage name="nucc>
+    <stage name="nucc">
         <fcl>run_nuccanalyser_overlay.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>

@@ -13,6 +13,7 @@
 #include "art/Framework/Core/ModuleMacros.h"
 #include "art/Framework/Principal/Event.h"
 #include "art/Framework/Principal/Handle.h"
+#include "canvas/Persistency/Common/FindManyP.h"
 #include "art/Framework/Principal/Run.h"
 #include "art/Framework/Principal/SubRun.h"
 #include "canvas/Utilities/InputTag.h"
@@ -28,6 +29,7 @@
 #include "lardataobj/RecoBase/SpacePoint.h"
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/MCSFitResult.h"
+#include "lardataobj/AnalysisBase/ParticleID.h"
 
 #include "larcoreobj/SummaryData/POTSummary.h"
 
@@ -38,6 +40,7 @@
 
 #include "helpers/PandoraInterfaceHelper.h"
 #include "helpers/EnergyHelper.h"
+#include "helpers/TrackHelper.h"
 
 #include "TTree.h"
 
@@ -97,7 +100,8 @@ class NuCC : public art::EDAnalyzer
      *  @return 1 if succesful, 0 if failure.
      */
     bool FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
-                       const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle);
+                       const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle,
+                       const art::FindManyP<anab::ParticleID> &trackPIDAssn);
 
     /**
      *  @brief  Fill the information about the matching of the reconstructed daughter
@@ -120,6 +124,7 @@ class NuCC : public art::EDAnalyzer
 
     PandoraInterfaceHelper pandoraInterfaceHelper;
     EnergyHelper energyHelper;
+    TrackHelper trackHelper;
 
     // LAr Pandora Helper fields
     lar_pandora::LArPandoraHelper larpandora;
@@ -206,6 +211,8 @@ class NuCC : public art::EDAnalyzer
     float fTrackMCS_mom;
     float fTrackMCS_err;
     float fTrackMCS_ll;
+    float fTrackPID_chiproton;
+    float fTrackPID_chimuon;
     // Shower info
     float fShowerLength;
     float fShowerOpenAngle;
@@ -351,7 +358,8 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("track_mcs_mom", &fTrackMCS_mom, "track_mcs_mom/F");
     fNueDaughtersTree->Branch("track_mcs_err", &fTrackMCS_err, "track_mcs_err/F");
     fNueDaughtersTree->Branch("track_mcs_ll", &fTrackMCS_ll, "track_mcs_ll/F");
-    
+    fNueDaughtersTree->Branch("track_chi2_proton", &fTrackPID_chiproton, "track_chi2_proton/F");
+    fNueDaughtersTree->Branch("track_chi2_muon", &fTrackPID_chimuon, "track_chi2_muon/F");
     fNueDaughtersTree->Branch("shower_length", &fShowerLength, "shower_length/F");
     fNueDaughtersTree->Branch("shower_openangle", &fShowerOpenAngle, "shower_openangle/F");
     fNueDaughtersTree->Branch("shower_dirx", &fShowerDirX, "shower_dirx/F");

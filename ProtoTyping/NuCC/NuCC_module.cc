@@ -66,7 +66,13 @@ void NuCC::FillReconstructed(art::Event const &evt)
   lar_pandora::ClusterVector clusterVector_dummy;
   larpandora.CollectClusters(evt, m_pfp_producer, clusterVector_dummy, clustersToHits);
   //larpandora.CollectSpacePoints(evt, m_pfp_producer, spacePointVector_dummy, spacePointsToHits, hitsToSpacePoints);
+  art::ValidHandle<std::vector<recob::Track>> trackHandle = evt.getValidHandle<std::vector<recob::Track> >(m_pfp_producer);
   const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle = evt.getValidHandle<std::vector<recob::MCSFitResult>>("pandoraMCSMu");
+  const art::FindManyP<anab::ParticleID> trackPIDAssn(trackHandle, evt, "pandoracalipidSCE");
+  if (!trackPIDAssn.isValid()){
+    std::cout << "[NuCC::FillReconstructed] trackPIDAssn.isValid() == false" << std::endl;
+  } 
+
 
   // Start filling information
   art::Ptr<recob::PFParticle> pfnu = pfneutrinos.front();
@@ -102,7 +108,7 @@ void NuCC::FillReconstructed(art::Event const &evt)
   {
     if (!pfp->IsPrimary())
     {
-      if (!FillDaughters(pfp, MCSMu_handle))
+      if (!FillDaughters(pfp, MCSMu_handle, trackPIDAssn))
       {
         fDaughtersStored = false;
       }
@@ -117,7 +123,8 @@ void NuCC::FillReconstructed(art::Event const &evt)
 }
 
 bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
-                         const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle)
+                         const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle,
+                         const art::FindManyP<anab::ParticleID> &trackPIDAssn)
 {
   clearDaughter();
   const lar_pandora::ClusterVector cluster_vec = particlesToClusters.at(pfp);
@@ -169,7 +176,6 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
   // Track-like fields
   if (particlesToTracks.find(pfp) != particlesToTracks.end())
   {
-
     fIsTrack = true;
     fNumTracks++;
     const art::Ptr<recob::Track> this_track = particlesToTracks.at(pfp).front();
@@ -187,6 +193,19 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
     fTrackMCS_mom = mcsMu.fwdMomentum();
     fTrackMCS_err = mcsMu.fwdMomUncertainty();
     fTrackMCS_ll = mcsMu.fwdLogLikelihood();
+
+    // PID information:
+    std::map<std::string, float> pid_map;
+    if(trackHelper.getPID(pid_map, this_track, trackPIDAssn))
+    {
+      fTrackPID_chiproton = pid_map.at("chi2_proton");
+      fTrackPID_chimuon = pid_map.at("chi2_muon");
+      std::cout << "[NuCC::FillDaughters] fTrackPID_chiproton: " << fTrackPID_chiproton << ", fTrackPID_chimuon: " << fTrackPID_chimuon << std::endl;
+    }
+    else
+    {
+      std::cout << "[NuCC::FillDaughters] Track has no PID attached to it" << std::endl;
+    }
   }
 
   // Shower-like fields
@@ -248,8 +267,8 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
   std::cout << "[NuCC::FillDaughters] Trackscore: " << fTrackScore << ", Generation: " << fGeneration;
   std::cout << ", vtx distance: " << fVtxDistance << std::endl;
   std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsU << ", Energy: " << fCaloU << ", dedx hits: " << fDedxHitsU << ", dedx: " << fDedxU << ", pitch: " << fDedxPitchU << std::endl;
-  std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsV << ", Energy: " << fCaloV << ", dedx hits: " << fDedxHitsV << ", dedx: " << fDedxV << ", pitch: " << fDedxPitchV << std::endl;
-  std::cout << "[NuCC::FillDaughters] U Plane: Hits:" << fNhitsY << ", Energy: " << fCaloY << ", dedx hits: " << fDedxHitsY << ", dedx: " << fDedxY << ", pitch: " << fDedxPitchY << std::endl;
+  std::cout << "[NuCC::FillDaughters] V Plane: Hits:" << fNhitsV << ", Energy: " << fCaloV << ", dedx hits: " << fDedxHitsV << ", dedx: " << fDedxV << ", pitch: " << fDedxPitchV << std::endl;
+  std::cout << "[NuCC::FillDaughters] Y Plane: Hits:" << fNhitsY << ", Energy: " << fCaloY << ", dedx hits: " << fDedxHitsY << ", dedx: " << fDedxY << ", pitch: " << fDedxPitchY << std::endl;
   return true;
 }
 
