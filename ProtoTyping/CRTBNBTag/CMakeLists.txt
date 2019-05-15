@@ -1,6 +1,6 @@
 art_make( 
-          # Needed for standalone c++ helper files
-          LIB_LIBRARIES 
+          LIBRARY_NAME
+                        CRTBNBTag
 
           # Needed for the main module          
           MODULE_LIBRARIES
@@ -32,11 +32,7 @@ art_make(
                         ${ROOT_BASIC_LIB_LIST}
                         CosmicHelpers
                         CRT
-                        ##CRTAna
           )
-
-##add_subdirectory(job)
-##add_subdirectory(helpers)
 
 ##install_headers()
 install_source()
