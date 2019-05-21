@@ -320,6 +320,8 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
     fTrueVx = matched_mcp->Vx();
     fTrueVy = matched_mcp->Vy();
     fTrueVz = matched_mcp->Vz();
+    fTrueLength = (matched_mcp->Position().Vect() - matched_mcp->EndPosition().Vect()).Mag();
+
     pandoraInterfaceHelper.SCE(fTrueVx, fTrueVy, fTrueVz, matched_mcp->T(),
                                fTrueVxSce, fTrueVySce, fTrueVzSce);
     std::cout << "[NuCC::MatchDaughter] Daughter matched with PDG: " << fTruePDG << ", neutrino origin: " << fMatchedNeutrino << std::endl;

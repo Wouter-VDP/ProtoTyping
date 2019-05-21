@@ -233,6 +233,7 @@ class NuCC : public art::EDAnalyzer
     int fTruePDG;
     float fTrueEnergy;
     float fTrueVx, fTrueVy, fTrueVz;
+    float fTrueLength;
     float fTrueVxSce, fTrueVySce, fTrueVzSce;
 
     //// Tree for the POT subrun info
@@ -384,6 +385,7 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
         fNueDaughtersTree->Branch("mc_vx_sce", &fTrueVxSce, "mc_vx_sce/F");
         fNueDaughtersTree->Branch("mc_vy_sce", &fTrueVySce, "mc_vy_sce/F");
         fNueDaughtersTree->Branch("mc_vz_sce", &fTrueVzSce, "mc_vz_sce/F");
+        fNueDaughtersTree->Branch("mc_length", &fTrueLength, "mc_length/F");
         fNueDaughtersTree->Branch("mc_energy", &fTrueEnergy, "mc_energy/F");
         fNueDaughtersTree->Branch("mc_pdg", &fTruePDG, "mc_pdg/I");
     }

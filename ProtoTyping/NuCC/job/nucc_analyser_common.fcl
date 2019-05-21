@@ -13,6 +13,12 @@
 
 BEGIN_PROLOG
 
+# Track/Shower creation on the alloutcomes collections
+pandoraAllOutcomesTrack:          @local::microboone_pandoraTrackCreation
+pandoraAllOutcomesTrack.PFParticleLabel:  "pandoraPatRec:allOutcomes"
+pandoraAllOutcomesShower:         @local::microboone_pandoraShowerCreation
+pandoraAllOutcomesShower.PFParticleLabel:  "pandoraPatRec:allOutcomes"
+
 # crtsimhitcorr: only acts on the simulated CRT hits, which need a higher threshold 
 crtsimhitcorr: @local::crtsimhitcorr_filter
 crtsimhitcorr.HitThreshold: 70.0

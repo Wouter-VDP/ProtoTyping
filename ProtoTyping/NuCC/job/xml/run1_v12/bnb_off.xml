@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nucc_nu_only">
+<!ENTITY name "nucc_off_mcc9">
 <!ENTITY version "v08_00_00_12">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "prodgenie_bnb_nu_only_mcc9_v12_reco2">
+<!ENTITY dataset "wvdp_extbnb_run1_v12">
 <!ENTITY user "wvdp">
 ]>
 
 <project name="&name;">
     <!-- Doesn't matter for non-generating jobs -->
-    <numevents>10000000</numevents>
+    <numevents>1000000</numevents>
 
     <!--  Operating System  -->
     <os>SL6</os>
@@ -28,22 +28,21 @@
 
     <!--  Project stages  -->
     <stage name="nucc">
-        <fcl>run_nuccanalyser_overlay.fcl</fcl>
+        <fcl>run_nucc_analyser_beamOffData.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>109</numjobs>
+        <numjobs>1200</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
-        <maxfilesperjob>10</maxfilesperjob>
-        <jobsub>--expected-lifetime=6h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <maxfilesperjob>20</maxfilesperjob>
+        <jobsub>--expected-lifetime=10h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       
        <schema>root</schema>
     </stage>
 
 </project>
-

@@ -5,6 +5,10 @@ physics:
 
  producers:
  {
+    # Track/Shower 
+    pandoraAllOutcomesTrack:          @local::pandoraAllOutcomesTrack
+    pandoraAllOutcomesShower:         @local::pandoraAllOutcomesShower
+
     # CRT reco
     crtsimhitcorr:                    @local::crtsimhitcorr
     crthitcorr:                       @local::crtdatahitcorr
@@ -31,7 +35,9 @@ physics:
     nuCCAnalyser:                    @local::nucc_analyser
  }
 
- prod: [crtsimhitcorr, 
+ prod: [pandoraAllOutcomesTrack,
+        pandoraAllOutcomesShower,
+        crtsimhitcorr, 
         crthitcorr, 
         crttzero, 
         trackmatch, 
