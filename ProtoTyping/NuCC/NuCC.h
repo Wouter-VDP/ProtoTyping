@@ -208,6 +208,8 @@ class NuCC : public art::EDAnalyzer
     float fTrackEndX;
     float fTrackEndY;
     float fTrackEndZ;
+    float fTrackRange_mom_p;
+    float fTrackRange_mom_mu;
     float fTrackMCS_mom;
     float fTrackMCS_err;
     float fTrackMCS_ll;
@@ -235,6 +237,7 @@ class NuCC : public art::EDAnalyzer
     float fTrueVx, fTrueVy, fTrueVz;
     float fTrueLength;
     float fTrueVxSce, fTrueVySce, fTrueVzSce;
+    float fTruePx, fTruePy, fTruePz;
 
     //// Tree for the POT subrun info
     TTree *fSubrunTree;
@@ -356,6 +359,8 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("track_diry", &fTrackDirY, "track_diry/F");
     fNueDaughtersTree->Branch("track_dirz", &fTrackDirZ, "track_dirz/F");
 
+    fNueDaughtersTree->Branch("track_range_mom_p", &fTrackRange_mom_p, "track_range_mom_p/F");
+    fNueDaughtersTree->Branch("track_range_mom_mu", &fTrackRange_mom_mu, "track_range_mom_mu/F");
     fNueDaughtersTree->Branch("track_mcs_mom", &fTrackMCS_mom, "track_mcs_mom/F");
     fNueDaughtersTree->Branch("track_mcs_err", &fTrackMCS_err, "track_mcs_err/F");
     fNueDaughtersTree->Branch("track_mcs_ll", &fTrackMCS_ll, "track_mcs_ll/F");
@@ -387,7 +392,10 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
         fNueDaughtersTree->Branch("mc_vz_sce", &fTrueVzSce, "mc_vz_sce/F");
         fNueDaughtersTree->Branch("mc_length", &fTrueLength, "mc_length/F");
         fNueDaughtersTree->Branch("mc_energy", &fTrueEnergy, "mc_energy/F");
-        fNueDaughtersTree->Branch("mc_pdg", &fTruePDG, "mc_pdg/I");
+        fNueDaughtersTree->Branch("mc_px", &fTruePx, "mc_px/F");
+        fNueDaughtersTree->Branch("mc_py", &fTruePy, "mc_py/F");
+        fNueDaughtersTree->Branch("mc_pz", &fTruePz, "mc_pz/F");
+
     }
 
     fSubrunTree = tfs->make<TTree>("subruns", "SubRun Tree");

@@ -66,13 +66,13 @@ void NuCC::FillReconstructed(art::Event const &evt)
   lar_pandora::ClusterVector clusterVector_dummy;
   larpandora.CollectClusters(evt, m_pfp_producer, clusterVector_dummy, clustersToHits);
   //larpandora.CollectSpacePoints(evt, m_pfp_producer, spacePointVector_dummy, spacePointsToHits, hitsToSpacePoints);
-  art::ValidHandle<std::vector<recob::Track>> trackHandle = evt.getValidHandle<std::vector<recob::Track> >(m_pfp_producer);
+  art::ValidHandle<std::vector<recob::Track>> trackHandle = evt.getValidHandle<std::vector<recob::Track>>(m_pfp_producer);
   const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle = evt.getValidHandle<std::vector<recob::MCSFitResult>>("pandoraMCSMu");
   const art::FindManyP<anab::ParticleID> trackPIDAssn(trackHandle, evt, "pandoracalipidSCE");
-  if (!trackPIDAssn.isValid()){
+  if (!trackPIDAssn.isValid())
+  {
     std::cout << "[NuCC::FillReconstructed] trackPIDAssn.isValid() == false" << std::endl;
-  } 
-
+  }
 
   // Start filling information
   art::Ptr<recob::PFParticle> pfnu = pfneutrinos.front();
@@ -194,13 +194,16 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
     fTrackMCS_err = mcsMu.fwdMomUncertainty();
     fTrackMCS_ll = mcsMu.fwdLogLikelihood();
 
+    trackHelper.getRangeMomentum(fTrackLength, fTrackRange_mom_p, fTrackRange_mom_mu);
+
     // PID information:
     std::map<std::string, float> pid_map;
-    if(trackHelper.getPID(pid_map, this_track, trackPIDAssn))
+    if (trackHelper.getPID(pid_map, this_track, trackPIDAssn))
     {
       fTrackPID_chiproton = pid_map.at("chi2_proton");
       fTrackPID_chimuon = pid_map.at("chi2_muon");
-      std::cout << "[NuCC::FillDaughters] fTrackPID_chiproton: " << fTrackPID_chiproton << ", fTrackPID_chimuon: " << fTrackPID_chimuon << std::endl;
+      std::cout << "[NuCC::FillDaughters] fTrackPID_chiproton: " << fTrackPID_chiproton << ", fTrackPID_chimuon: " << fTrackPID_chimuon;
+      std::cout << ", fTrackRange_mom_p: " << fTrackRange_mom_p << ", fTrackRange_mom_mu: " << fTrackRange_mom_mu << std::endl;
     }
     else
     {
@@ -280,7 +283,11 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
   if (fGeneration == 2)
   {
     if (matchedParticles.find(pfp) == matchedParticles.end())
+    {
+      fMatchedNeutrino = false;
+      fCosmicMatched = true;
       return false;
+    }
     matched_mcp = matchedParticles.at(pfp);
   }
   else if (fGeneration == 3)
@@ -320,6 +327,9 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
     fTrueVx = matched_mcp->Vx();
     fTrueVy = matched_mcp->Vy();
     fTrueVz = matched_mcp->Vz();
+    fTruePx = matched_mcp->Px();
+    fTruePy = matched_mcp->Py();
+    fTruePz = matched_mcp->Pz();
     fTrueLength = (matched_mcp->Position().Vect() - matched_mcp->EndPosition().Vect()).Mag();
 
     pandoraInterfaceHelper.SCE(fTrueVx, fTrueVy, fTrueVz, matched_mcp->T(),

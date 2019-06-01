@@ -4,12 +4,13 @@ TrackHelper::TrackHelper()
 {
 }
 
-bool TrackHelper::getPID(std::map<std::string, float> &pid_map, 
+bool TrackHelper::getPID(std::map<std::string, float> &pid_map,
                          const art::Ptr<recob::Track> &this_track,
                          const art::FindManyP<anab::ParticleID> &trackPIDAssn)
 {
     bool ok = false;
-    if (!trackPIDAssn.isValid()){
+    if (!trackPIDAssn.isValid())
+    {
         std::cout << "[ParticleIDValidation] trackPIDAssn.isValid() == false. Skipping track." << std::endl;
         return false;
     }
@@ -26,7 +27,7 @@ bool TrackHelper::getPID(std::map<std::string, float> &pid_map,
                 {
                     std::cout << "[TrackHelper::getPID] Bad AlgScore" << std::endl;
                 }
-                else 
+                else
                 {
                     if (AlgScore.fPlaneMask.test(0) && AlgScore.fAlgName == "Chi2")
                     {
@@ -34,18 +35,24 @@ bool TrackHelper::getPID(std::map<std::string, float> &pid_map,
                         {
                             if (AlgScore.fAssumedPdg == 2212)
                             {
-                                pid_map.insert ( std::pair<std::string,float>("chi2_proton", AlgScore.fValue) );
-                                ok =true;
+                                pid_map.insert(std::pair<std::string, float>("chi2_proton", AlgScore.fValue));
+                                ok = true;
                             }
                             else if (AlgScore.fAssumedPdg == 13)
                             {
-                                pid_map.insert ( std::pair<std::string,float>("chi2_muon", AlgScore.fValue) );
+                                pid_map.insert(std::pair<std::string, float>("chi2_muon", AlgScore.fValue));
                             }
                         }
                     }
                 }
             }
-        } 
-        return ok;  
+        }
+        return ok;
     }
+}
+
+void TrackHelper::getRangeMomentum(float length, float &mom_proton, float &mom_muon)
+{
+    mom_proton = _trkmom.GetTrackMomentum(length, 2212);
+    mom_muon = _trkmom.GetTrackMomentum(length, 13);
 }

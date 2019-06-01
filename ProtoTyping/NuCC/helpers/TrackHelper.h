@@ -4,6 +4,7 @@
 #include "lardataobj/RecoBase/Track.h"
 #include "canvas/Persistency/Common/FindManyP.h"
 #include "lardataobj/AnalysisBase/ParticleID.h"
+#include "larreco/RecoAlg/TrackMomentumCalculator.h"
 
 
 class TrackHelper
@@ -15,6 +16,11 @@ public:
   bool getPID(std::map<std::string, float> &pid_map, 
               const art::Ptr<recob::Track> &this_track,
               const art::FindManyP<anab::ParticleID> &trackPIDAssn);
+
+  void getRangeMomentum(float length, float& mom_proton, float& mom_muon);
+
+private:
+  trkf::TrackMomentumCalculator _trkmom;
 };
 
 #endif

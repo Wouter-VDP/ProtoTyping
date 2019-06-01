@@ -23,7 +23,7 @@
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
         <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_12/srcs/ProtoTyping/ProtoTyping/NuCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_20May.tar</local>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_12_1Jun.tar</local>
     </larsoft>
 
     <!--  Project stages  -->
