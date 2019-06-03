@@ -40,7 +40,8 @@ public:
     *
     *  @param matchedParticles the output matches between reconstructed and true particles
     */
-  void GetRecoToTrueMatches(lar_pandora::PFParticlesToMCParticles &matchedParticles);
+  void GetRecoToTrueMatches(lar_pandora::PFParticlesToMCParticles &matchedParticles,
+                            std::map<art::Ptr<recob::PFParticle>, float> &matchedHitFractions);
 
   /**
      *  @brief Configure function parameters (call this function first)
@@ -89,6 +90,7 @@ public:
 protected:
   lar_pandora::HitsToMCParticles m_hit_to_mcps_map; ///< A map from recon hits to MCParticles
   lar_pandora::PFParticlesToHits m_pfp_to_hits_map; ///< A map from PFParticles to recon hits
+
 private:
   bool m_configured = false;
   bool m_debug = false;

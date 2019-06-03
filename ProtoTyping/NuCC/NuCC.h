@@ -146,6 +146,7 @@ class NuCC : public art::EDAnalyzer
     // Used for reco truth matching
     lar_pandora::PFParticlesToMCParticles matchedParticles;
     std::set<art::Ptr<simb::MCParticle>> matchedMCParticles;
+    std::map<art::Ptr<recob::PFParticle>, float> matchedHitFractions;
 
     //// Tree for every event
     TTree *fEventTree;
@@ -232,6 +233,7 @@ class NuCC : public art::EDAnalyzer
     float fDedxPitchY;
     // Matched MCParticle info
     bool fMatchedNeutrino;
+    float fTrueHitFraction;
     int fTruePDG;
     float fTrueEnergy;
     float fTrueVx, fTrueVy, fTrueVz;
@@ -384,6 +386,8 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     if (!m_isData)
     {
         fNueDaughtersTree->Branch("mc_neutrino", &fMatchedNeutrino, "mc_neutrino/O");
+        fNueDaughtersTree->Branch("mc_pdg", &fTruePDG, "mc_pdg/I");
+        fNueDaughtersTree->Branch("mc_hit_fraction", &fTrueHitFraction, "mc_hit_fraction/F");
         fNueDaughtersTree->Branch("mc_vx", &fTrueVx, "mc_vx/F");
         fNueDaughtersTree->Branch("mc_vy", &fTrueVy, "mc_vy/F");
         fNueDaughtersTree->Branch("mc_vz", &fTrueVz, "mc_vz/F");
@@ -395,7 +399,6 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
         fNueDaughtersTree->Branch("mc_px", &fTruePx, "mc_px/F");
         fNueDaughtersTree->Branch("mc_py", &fTruePy, "mc_py/F");
         fNueDaughtersTree->Branch("mc_pz", &fTruePz, "mc_pz/F");
-
     }
 
     fSubrunTree = tfs->make<TTree>("subruns", "SubRun Tree");
@@ -444,6 +447,7 @@ void NuCC::clearEvent()
     spacePointsToHits.clear();
 
     matchedParticles.clear();
+    matchedHitFractions.clear();
     matchedMCParticles.clear();
 }
 

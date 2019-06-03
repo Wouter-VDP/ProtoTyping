@@ -6,7 +6,7 @@ void NuCC::endSubRun(const art::SubRun &subrun)
   {
     art::Handle<sumdata::POTSummary> potSummaryHandle;
     m_pot = subrun.getByLabel("generator", potSummaryHandle) ? static_cast<float>(potSummaryHandle->totpot) : 0.f;
-    std::cout << "[LArPandoraExternalEventBuilding::endSubRun] Storing POT info!" << std::endl;
+    std::cout << "[NuCC::endSubRun] Storing POT info!" << std::endl;
   }
 
   m_run = subrun.run();
@@ -279,7 +279,10 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
 {
   if (m_isData)
     return false;
+
   art::Ptr<simb::MCParticle> matched_mcp;
+  float matchedHitFraction = 0;
+
   if (fGeneration == 2)
   {
     if (matchedParticles.find(pfp) == matchedParticles.end())
@@ -289,6 +292,7 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
       return false;
     }
     matched_mcp = matchedParticles.at(pfp);
+    matchedHitFraction = matchedHitFractions.at(pfp);
   }
   else if (fGeneration == 3)
   {
@@ -299,8 +303,13 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
     const art::Ptr<recob::PFParticle> &pfp_parent = iter->second;
 
     if (matchedParticles.find(pfp_parent) == matchedParticles.end())
+    {
+      fMatchedNeutrino = false;
+      fCosmicMatched = true;
       return false;
+    }
     matched_mcp = matchedParticles.at(pfp_parent);
+    matchedHitFraction = matchedHitFractions.at(pfp_parent);
   }
   else
   {
@@ -323,6 +332,7 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
     }
 
     fTruePDG = matched_mcp->PdgCode();
+    fTrueHitFraction = matchedHitFraction;
     fTrueEnergy = matched_mcp->E();
     fTrueVx = matched_mcp->Vx();
     fTrueVy = matched_mcp->Vy();
@@ -334,7 +344,7 @@ bool NuCC::MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle
 
     pandoraInterfaceHelper.SCE(fTrueVx, fTrueVy, fTrueVz, matched_mcp->T(),
                                fTrueVxSce, fTrueVySce, fTrueVzSce);
-    std::cout << "[NuCC::MatchDaughter] Daughter matched with PDG: " << fTruePDG << ", neutrino origin: " << fMatchedNeutrino << std::endl;
+    std::cout << "[NuCC::MatchDaughter] Daughter matched with PDG: " << fTruePDG << ", hit purity: " << matchedHitFraction << std::endl;
   }
   return true;
 }
@@ -422,7 +432,7 @@ void NuCC::FillTrueNuDaughters(art::Event const &evt)
 void NuCC::FillReconTruthMatching(art::Event const &evt)
 {
   pandoraInterfaceHelper.Configure(evt, m_pfp_producer, m_pfp_producer, m_hitfinder_producer, m_geant_producer, m_hit_mcp_producer);
-  pandoraInterfaceHelper.GetRecoToTrueMatches(matchedParticles);
+  pandoraInterfaceHelper.GetRecoToTrueMatches(matchedParticles, matchedHitFractions);
   std::cout << "[NuCC::FillReconTruthMatching] ";
   std::cout << "Number of PFPparticles in event: " << pfparticles.size() << std::endl;
   for (auto it = matchedParticles.begin(); it != matchedParticles.end(); ++it)

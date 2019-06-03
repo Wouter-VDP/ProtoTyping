@@ -166,7 +166,8 @@ art::Ptr<simb::MCTruth> PandoraInterfaceHelper::TrackIDToMCTruth(art::Event cons
   return null_ptr;
 }
 
-void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCParticles &matchedParticles)
+void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCParticles &matchedParticles,
+                                                  std::map<art::Ptr<recob::PFParticle>, float> &matchedHitFractions)
 {
   bool m_debug = false;
 
@@ -182,6 +183,7 @@ void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCPa
 
     // The PFParticle
     const art::Ptr<recob::PFParticle> recoParticle = iter1.first;
+    float hitsFractionMax = 0; // The fraction of hits of the reco particle matched with the dominant true particle.
 
     if (m_debug)
       std::cout << "[PandoraInterfaceHelper::GetRecoToTrueMatches] Looking at PFP with ID " << recoParticle->Self() << std::endl;
@@ -196,7 +198,6 @@ void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCPa
     // Loop over all the hits associated to this reco particle
     for (auto hit : hitVector)
     {
-
       // Find the MCParticle that share this same hit (if any)
       auto iter3 = m_hit_to_mcps_map.find(hit);
       if (m_hit_to_mcps_map.end() == iter3)
@@ -227,12 +228,15 @@ void PandoraInterfaceHelper::GetRecoToTrueMatches(lar_pandora::PFParticlesToMCPa
     if (truthContributionMap.end() != mIter)
     {
       const art::Ptr<simb::MCParticle> trueParticle = mIter->first;
+      hitsFractionMax = (float) mIter->second.size() / (float) hitVector.size();
 
       if (m_debug)
         std::cout << "[PandoraInterfaceHelper::GetRecoToTrueMatches] \t >>> Match found with MCParticle with PDG " << trueParticle->PdgCode() << std::endl;
 
       // Emplace into the output map
       matchedParticles[recoParticle] = trueParticle;
+      matchedHitFractions[recoParticle] = hitsFractionMax;
+      std::cout << "[PandoraInterfaceHelper::GetRecoToTrueMatches] hitsFractionMax: " << hitsFractionMax << std::endl;
     }
 
   } // m_pfp_to_hits_map loop ends
@@ -272,12 +276,12 @@ void PandoraInterfaceHelper::SCE(const float &x,
   y_out = y + sce_start.Y();
   z_out = z + sce_start.Z();
 
-  auto const& detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>(); 
-  auto const& detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
+  auto const &detProperties = lar::providerFrom<detinfo::DetectorPropertiesService>();
+  auto const &detClocks = lar::providerFrom<detinfo::DetectorClocksService>();
   float g4Ticks = detClocks->TPCG4Time2Tick(nu_time) + detProperties->GetXTicksOffset(0, 0, 0) - detProperties->TriggerOffset();
   float xtimeoffset = detProperties->ConvertTicksToX(g4Ticks, 0, 0, 0);
-  
-  x_out = (x + xtimeoffset - sce_start.X())+ 0.6;
+
+  x_out = (x + xtimeoffset - sce_start.X()) + 0.6;
 }
 
 #endif
