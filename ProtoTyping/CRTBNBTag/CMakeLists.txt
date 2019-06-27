@@ -35,5 +35,6 @@ art_make(
           )
 
 ##install_headers()
+add_subdirectory(job)
 install_source()
 install_fhicl()

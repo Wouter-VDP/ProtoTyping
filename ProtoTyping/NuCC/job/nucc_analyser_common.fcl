@@ -20,42 +20,38 @@ pandoraAllOutcomesShower:         @local::microboone_pandoraShowerCreation
 pandoraAllOutcomesShower.PFParticleLabel:  "pandoraPatRec:allOutcomes"
 
 # crtsimhitcorr: only acts on the simulated CRT hits, which need a higher threshold 
-crtsimhitcorr: @local::crtsimhitcorr_filter
-crtsimhitcorr.HitThreshold: 70.0
-crtsimhitcorr.StripThreshold: 5.0
-crtsimhitcorr.SiPMThreshold: 0.0
-crtsimhitcorr.PEscaleFactor: -1.0 #-1.0 means skip this (or use 1.0)
-crtsimhitcorr.CrtHitsIn_Label: "mixer"
-crtsimhitcorr.RemoveBottomHits: true
+#crtsimhitcorr: @local::crtsimhitcorr_filter
+#crtsimhitcorr.HitThreshold: 70.0
+#crtsimhitcorr.StripThreshold: 5.0
+#crtsimhitcorr.SiPMThreshold: 0.0
+#crtsimhitcorr.PEscaleFactor: -1.0 #-1.0 means skip this (or use 1.0)
+#crtsimhitcorr.CrtHitsIn_Label: "mixer"
+#crtsimhitcorr.RemoveBottomHits: true
 
 # crthitcorr: only on data hits, and make the alignment corrections to the position
-crthitcorr: @local::crtdatahitcorr
-crthitcorr.CorrectAlignment: true
-crthitcorr.StripThreshold: 0.0
-crthitcorr.SiPMThreshold: 0.0
-crthitcorr.HitThreshold: 70.0
-crthitcorr.NumberCollections: 1
+#crthitcorr: @local::crtdatahitcorr
+#crthitcorr.CorrectAlignment: true
+#crthitcorr.StripThreshold: 0.0
+#crthitcorr.SiPMThreshold: 0.0
+#crthitcorr.HitThreshold: 70.0
+#crthitcorr.NumberCollections: 1
 
-crttzero: @local::crttzero
-crttzero.data_label: "crthitcorr"
+#crttzero: @local::crttzero
+#crttzero.data_label: "crthitcorr"
 
-trackmatch: @local::t0recocrthit_data
-trackmatch.MatchCutTop: 40
-trackmatch.MatchCut: 25
-trackmatch.data_label_TPCtrack: "pandoraAllOutcomesTrack"
-trackmatch.data_label_CRThit: "crthitcorr"
-trackmatch.data_label_CRTtzero: "crttzero"
+#trackmatch: @local::t0recocrthit_data
+#trackmatch.MatchCutTop: 40
+#trackmatch.MatchCut: 25
+#trackmatch.data_label_TPCtrack: "pandoraAllOutcomesTrack"
+#trackmatch.data_label_CRThit: "crthitcorr"
+#trackmatch.data_label_CRTtzero: "crttzero"
 
 # Flash neutrino ID tool - Use optical information only to select the neutrino slice
 pandora_flash_event_building: @local::pandora_event_building
-pandora_flash_event_building.SliceIdTool: @local::flash_neutrino_id_tool
 pandora_flash_event_building.ShouldUseTestBeamMode: false
 pandora_flash_event_building.ShouldOutputSubrunsTree: true
 pandora_flash_event_building.IsData: false
 pandora_flash_event_building.GeneratorLabel: "generator"
-pandora_flash_event_building.SliceIdTool.HasCRT: true
-#pandora_flash_event_building.SliceIdTool.FlashLabel: "wcopflash:beam"
-pandora_flash_event_building.SliceIdTool.FlashLabel: "simpleFlashBeam"
 
 # MCS momentum, Clorimetry and PID
 pandoraMCSMu:                     @local::mcsfitproducer
