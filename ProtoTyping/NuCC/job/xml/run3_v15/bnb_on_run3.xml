@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nucc_off_mcc9_v16">
+<!ENTITY name "nucc_on_run3_mcc9">
 <!ENTITY version "v08_00_00_16">
 <!ENTITY qualifier "e17:prof">
-<!ENTITY dataset "data_extbnb_mcc9.1_beta_v08_00_00_15_run1_reco2">
+<!ENTITY dataset "data_bnb_optfilter_G1_1e19_mcc9.1_beta_v08_00_00_15_reco2">
 <!ENTITY user "wvdp">
 ]>
 
@@ -28,18 +28,18 @@
 
     <!--  Project stages  -->
     <stage name="nucc">
-        <fcl>run_nucc_analyser_beamOffData.fcl</fcl>
+        <fcl>run_nucc_analyser_beamOnData_run3.fcl</fcl>
         
         <outdir>/pnfs/uboone/scratch/users/&user;/&version;/&name;</outdir>
         <logdir>/pnfs/uboone/scratch/users/&user;/log/&version;/&name;</logdir>
         <workdir>/pnfs/uboone/scratch/users/&user;/work/&version;/&name;</workdir>
         <bookdir>/uboone/data/users/&user;/book/&version;/&name;</bookdir>>
         <inputdef>&dataset;</inputdef>
-        <numjobs>135</numjobs>
+        <numjobs>263</numjobs>
         <disk>10GB</disk>
         <memory>1900</memory>
-        <maxfilesperjob>30</maxfilesperjob>
-        <jobsub>--expected-lifetime=10h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
+        <maxfilesperjob>10</maxfilesperjob>
+        <jobsub>--expected-lifetime=6h -Q --append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub>
         <jobsub_start>--append_condor_requirements='(TARGET.HAS_CVMFS_uboone_opensciencegrid_org==true)'</jobsub_start> 
       
        <schema>root</schema>

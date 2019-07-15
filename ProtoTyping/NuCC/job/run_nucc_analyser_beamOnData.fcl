@@ -1,3 +1,4 @@
 #include "nucc_analyser_data.fcl"
 
 physics.producers.pandoraSliceId.SliceIdTool: @local::flash_neutrino_id_tool_beamOn
+physics.producers.pandoraSliceId.SliceIdTool.ShouldWriteToFile: true

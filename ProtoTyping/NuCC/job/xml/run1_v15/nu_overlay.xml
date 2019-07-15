@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE project [
-<!ENTITY name "nucc_nu_overlay_mcc9_v15">
-<!ENTITY version "v08_00_00_15">
+<!ENTITY name "nucc_nu_overlay_mcc9_v16">
+<!ENTITY version "v08_00_00_16">
 <!ENTITY qualifier "e17:prof">
 <!ENTITY dataset "prodgenie_bnb_nu_uboone_overlay_mcc9.1_beta_run1_reco2">
 <!ENTITY user "wvdp">
@@ -22,8 +22,8 @@
     <larsoft>
         <tag>&version;</tag>
         <qual>&qualifier;</qual>
-        <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_15/srcs/ProtoTyping/ProtoTyping/NuCC/job</fcldir>
-        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_15_27Jun.tar</local>
+        <fcldir>/uboone/app/users/&user;/Binaries/Uboonecode/ubc_v08_00_00_16/srcs/ProtoTyping/ProtoTyping/NuCC/job</fcldir>
+        <local>/pnfs/uboone/resilient/users/&user;/submission/ubc_v8_0_0_16_27Jun.tar</local>
     </larsoft>
 
     <!--  Project stages  -->

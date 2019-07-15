@@ -58,6 +58,9 @@ physics:
 #physics.producers.crthitcorr.CrtHitsIn_Label1: "crtsimhitcorr"
 
 physics.producers.pandoraSliceId.SliceIdTool: @local::flash_neutrino_id_tool_overlay
+physics.producers.pandoraSliceId.SliceIdTool.ShouldWriteToFile: true
+
+
 physics.producers.shrreco3d.ADCtoE: [245,252,248.2] # e-/ADC
 physics.analyzers.nuCCAnalyser.is_data:                                     false
 physics.analyzers.nuCCAnalyser.has_MC_neutrino:                             true
