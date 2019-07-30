@@ -30,8 +30,11 @@
 #include "lardataobj/RecoBase/PFParticleMetadata.h"
 #include "lardataobj/RecoBase/MCSFitResult.h"
 #include "lardataobj/AnalysisBase/ParticleID.h"
+#include "lardataobj/AnalysisBase/T0.h"
 
 #include "larcoreobj/SummaryData/POTSummary.h"
+#include "larcore/Geometry/Geometry.h"
+
 
 #include "nusimdata/SimulationBase/MCParticle.h"
 #include "nusimdata/SimulationBase/MCTruth.h"
@@ -48,7 +51,7 @@ class NuCC;
 
 class NuCC : public art::EDAnalyzer
 {
-  public:
+public:
     explicit NuCC(fhicl::ParameterSet const &p);
     // The compiler-generated destructor is fine for non-base
     // classes without bare pointers or other resource use.
@@ -111,16 +114,55 @@ class NuCC : public art::EDAnalyzer
      */
     bool MatchDaughter(art::Event const &evt, const art::Ptr<recob::PFParticle> &pfp);
 
+    /**
+     *  @brief  Tag a daughter as a muon candidate
+     *
+     *  @return 1 if succesfully, 0 if not.
+     */
+    bool IsMuonCandidate();
+
+    /**
+     *  @brief  Tag event as NuMuCC, if so, create association
+     *
+     *  @return 1 if succesfully, 0 if not.
+     */
+    bool IsNuMuCC();
+
+    /**
+     *  @brief  Returns if point is inside a fiducial volume
+     *
+     *  @param fiducial volume tolerance: -x,+x,-y,+y,-z,+z
+     *  @return 1 if succesfully, 0 if not.
+     */
+    bool IsContained(float x, float y, float z, const std::vector<float> &borders) const;
+
+
     void endSubRun(const art::SubRun &subrun);
 
-  private:
+private:
     // Fields needed for the analyser
     std::string m_pfp_producer;
     std::string m_hitfinder_producer;
     std::string m_geant_producer;
     std::string m_hit_mcp_producer;
+
+    float m_vtx_fid_x_start;
+    float m_vtx_fid_y_start;
+    float m_vtx_fid_z_start;
+    float m_vtx_fid_x_end;
+    float m_vtx_fid_y_end;
+    float m_vtx_fid_z_end;
+    float m_pfp_start_border;
+
     bool m_hasMCNeutrino;
     bool m_isData;
+
+    float m_muon_cut_trackscore;
+    float m_muon_cut_vtxdistance;
+    float m_muon_cut_protonchi2;
+    float m_muon_cut_muonchi2;
+    float m_muon_cut_chiratio;
+    float m_muon_cut_length;
 
     PandoraInterfaceHelper pandoraInterfaceHelper;
     EnergyHelper energyHelper;
@@ -176,9 +218,13 @@ class NuCC : public art::EDAnalyzer
     float fNu_Score;
     uint fNu_SliceIndex;
     float fNu_Vx, fNu_Vy, fNu_Vz;
+    bool fNu_Contained;
+    bool fDaughtersStartContained;
     uint fNu_NhitsU, fNu_NhitsV, fNu_NhitsY;
     float fNu_CaloU, fNu_CaloV, fNu_CaloY;
     uint fNu_NSpacepoints;
+    float fNu_FlashChi2;
+    float fBestObviousCosmic_FlashChi2;
     uint fNumPrimaryDaughters;
     uint fNumDaughters;
     uint fNumMatchedDaughters;
@@ -186,6 +232,7 @@ class NuCC : public art::EDAnalyzer
     uint fNumTracks;
     bool fDaughtersStored; // if all the neutrino daughters were stored correctly
     bool fCosmicMatched;   // One of the daughters is not matched to neutrino origin
+    bool fIsNuMuCC;
 
     //// Tree for every daughter
     TTree *fNueDaughtersTree;
@@ -197,6 +244,7 @@ class NuCC : public art::EDAnalyzer
     bool fHasShowerDaughter;
     bool fIsTrackDaughter;
     float fVx, fVy, fVz;
+    float fStartContained;
     float fVtxDistance;
     uint fNhitsU, fNhitsV, fNhitsY;
     float fCaloU, fCaloV, fCaloY;
@@ -216,6 +264,7 @@ class NuCC : public art::EDAnalyzer
     float fTrackMCS_ll;
     float fTrackPID_chiproton;
     float fTrackPID_chimuon;
+    bool fIsMuonCandidate;
     // Shower info
     float fShowerLength;
     float fShowerOpenAngle;
@@ -254,8 +303,23 @@ void NuCC::reconfigure(fhicl::ParameterSet const &p)
     m_geant_producer = p.get<std::string>("geant_producer", "largeant");
     m_hit_mcp_producer = p.get<std::string>("hit_mcp_producer", "gaushitTruthMatch");
 
+    m_vtx_fid_x_start = p.get<float>("vtx_fid_x_start", 10);
+    m_vtx_fid_y_start = p.get<float>("vtx_fid_y_start", 10);
+    m_vtx_fid_z_start = p.get<float>("vtx_fid_z_start", 10);
+    m_vtx_fid_x_end = p.get<float>("vtx_fid_x_end", 10);
+    m_vtx_fid_y_end = p.get<float>("vtx_fid_y_end", 10);
+    m_vtx_fid_z_end = p.get<float>("vtx_fid_z_end", 50);
+    m_pfp_start_border = p.get<float>("pfp_start_border", 10);
+
     m_isData = p.get<bool>("is_data", false);
     m_hasMCNeutrino = p.get<bool>("has_MC_neutrino", false);
+
+    m_muon_cut_trackscore  = p.get<float>("muon_cut_trackscore", 0.8);
+    m_muon_cut_vtxdistance  = p.get<float>("muon_cut_vtxdistance", 4.0);
+    m_muon_cut_protonchi2 = p.get<float>("muon_cut_protonchi2", 60);
+    m_muon_cut_muonchi2 = p.get<float>("muon_cut_muonchi2", 30);
+    m_muon_cut_chiratio = p.get<float>("muon_cut_chiratio", 7);
+    m_muon_cut_length = p.get<float>("muon_cut_length", 5);
 
     energyHelper.reconfigure(p);
 }
@@ -296,7 +360,13 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fEventTree->Branch("nu_vx", &fNu_Vx, "nu_vx/F");
     fEventTree->Branch("nu_vy", &fNu_Vy, "nu_vy/F");
     fEventTree->Branch("nu_vz", &fNu_Vz, "nu_vz/F");
+    fEventTree->Branch("nu_contained", &fNu_Contained, "nu_contained/O");
     fEventTree->Branch("nu_pdg", &fNu_PDG, "nu_pdg/I");
+    fEventTree->Branch("nu_flash_chi2", &fNu_FlashChi2, "nu_flash_chi2/F");
+    fEventTree->Branch("obvious_cosmic_chi2", &fBestObviousCosmic_FlashChi2, "obvious_cosmic_chi2/F");
+    fEventTree->Branch("nu_mu_cc_selected", &fIsNuMuCC, "nu_mu_cc_selected/0");
+
+
     if (m_hasMCNeutrino && !m_isData)
     {
         fEventTree->Branch("num_neutrinos", &fNumNu, "num_neutrinos/i");
@@ -351,6 +421,7 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("vx", &fVx, "vx/F");
     fNueDaughtersTree->Branch("vy", &fVy, "vy/F");
     fNueDaughtersTree->Branch("vz", &fVz, "vz/F");
+    fNueDaughtersTree->Branch("start_contained", &fStartContained, "start_contained/O");
     fNueDaughtersTree->Branch("vtx_distance", &fVtxDistance, "vtx_distance/F");
 
     fNueDaughtersTree->Branch("track_length", &fTrackLength, "track_length/F");
@@ -360,7 +431,7 @@ NuCC::NuCC(fhicl::ParameterSet const &p)
     fNueDaughtersTree->Branch("track_dirx", &fTrackDirX, "track_dirx/F");
     fNueDaughtersTree->Branch("track_diry", &fTrackDirY, "track_diry/F");
     fNueDaughtersTree->Branch("track_dirz", &fTrackDirZ, "track_dirz/F");
-
+    fNueDaughtersTree->Branch("track_is_muon_candidate", &fIsMuonCandidate, "track_is_muon_candidate/O");
     fNueDaughtersTree->Branch("track_range_mom_p", &fTrackRange_mom_p, "track_range_mom_p/F");
     fNueDaughtersTree->Branch("track_range_mom_mu", &fTrackRange_mom_mu, "track_range_mom_mu/F");
     fNueDaughtersTree->Branch("track_mcs_mom", &fTrackMCS_mom, "track_mcs_mom/F");
@@ -414,6 +485,8 @@ void NuCC::clearEvent()
     fNu_PDG = 0; // if 0, no neutrinocandidate was found, only look at truth information.
     fDaughtersStored = true;
     fCosmicMatched = false;
+    fIsNuMuCC = false;
+    fDaughtersStartContained = true;
     fNumMatchedDaughters = 0;
     fNumShowers = 0;
     fNumTracks = 0;
@@ -425,6 +498,8 @@ void NuCC::clearEvent()
     fNu_CaloY = 0;
     fNu_NSpacepoints = 0;
     fNumNu = 0;
+    fNu_FlashChi2 = 0;
+    fBestObviousCosmic_FlashChi2 = 0;
 
     fTrueNu_DaughterPDG.clear();
     fTrueNu_DaughterE.clear();
@@ -474,6 +549,14 @@ void NuCC::clearDaughter()
     fTrackEndX = 0;
     fTrackEndY = 0;
     fTrackEndZ = 0;
+    fTrackRange_mom_p = 0;
+    fTrackRange_mom_mu = 0;
+    fTrackMCS_mom = 0;
+    fTrackMCS_err = 0;
+    fTrackMCS_ll = 0;
+    fTrackPID_chiproton = 0;
+    fTrackPID_chimuon = 0;
+    fIsMuonCandidate = false;
     // Shower info
     fShowerLength = 0;
     fShowerOpenAngle = 0;

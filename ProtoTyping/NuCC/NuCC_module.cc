@@ -29,6 +29,11 @@ void NuCC::analyze(art::Event const &evt)
   larpandora.CollectPFParticleMetadata(evt, m_pfp_producer, pfparticles, particlesToMetadata);
   larpandora.BuildPFParticleMap(pfparticles, particleMap);
 
+  if (!m_isData)
+  {
+    FillTrueNu(evt);
+  }
+
   if (pfparticles.size() == 0)
     std::cout << "[NuCC::FillReconstructed] No reconstructed PFParticles in event." << std::endl;
   else
@@ -41,13 +46,12 @@ void NuCC::analyze(art::Event const &evt)
       if (!m_isData)
       {
         FillReconTruthMatching(evt);
-        FillTrueNu(evt);
         FillTrueNuDaughters(evt);
       }
       FillReconstructed(evt);
-      fEventTree->Fill();
     }
   }
+  fEventTree->Fill();
   std::cout << "\n\n";
 }
 
@@ -69,6 +73,10 @@ void NuCC::FillReconstructed(art::Event const &evt)
   art::ValidHandle<std::vector<recob::Track>> trackHandle = evt.getValidHandle<std::vector<recob::Track>>(m_pfp_producer);
   const art::ValidHandle<std::vector<recob::MCSFitResult>> &MCSMu_handle = evt.getValidHandle<std::vector<recob::MCSFitResult>>("pandoraMCSMu");
   const art::FindManyP<anab::ParticleID> trackPIDAssn(trackHandle, evt, "pandoracalipidSCE");
+  art::Handle<std::vector<recob::PFParticle>> pfparticles_handle;
+  evt.getByLabel(m_pfp_producer, pfparticles_handle);
+  art::FindManyP<anab::T0> nuFlashScoreAsso(pfparticles_handle, evt, "flashmatch");
+
   if (!trackPIDAssn.isValid())
   {
     std::cout << "[NuCC::FillReconstructed] trackPIDAssn.isValid() == false" << std::endl;
@@ -78,6 +86,13 @@ void NuCC::FillReconstructed(art::Event const &evt)
   art::Ptr<recob::PFParticle> pfnu = pfneutrinos.front();
   fNu_PDG = pfnu->PdgCode();
   fNumPrimaryDaughters = pfnu->NumDaughters();
+
+  const std::vector<art::Ptr<anab::T0>> T0_flashchi_v = nuFlashScoreAsso.at(pfnu.key());
+  if (T0_flashchi_v.size() == 1)
+  {
+    fNu_FlashChi2 = T0_flashchi_v.at(0)->TriggerConfidence();
+  }
+
   lar_pandora::MetadataVector neutrino_metadata_vec = particlesToMetadata.at(pfnu);
   lar_pandora::VertexVector neutrino_vertex_vec = particlesToVertices.at(pfnu);
   if (neutrino_metadata_vec.size() != 1 || neutrino_vertex_vec.size() != 1)
@@ -93,6 +108,10 @@ void NuCC::FillReconstructed(art::Event const &evt)
     fNu_Vx = neutrino_vtx.X();
     fNu_Vy = neutrino_vtx.Y();
     fNu_Vz = neutrino_vtx.Z();
+    std::vector<float> fid_vtx_v = {m_vtx_fid_x_start, m_vtx_fid_y_start, m_vtx_fid_z_start,
+                                    m_vtx_fid_x_end, m_vtx_fid_y_end, m_vtx_fid_z_end};
+    fNu_Contained = IsContained(fNu_Vx, fNu_Vy, fNu_Vz, fid_vtx_v);
+
     if (m_hasMCNeutrino)
     {
       fTrueNu_VtxDistance = pandoraInterfaceHelper.Distance3D(fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce, fNu_Vx, fNu_Vy, fNu_Vz);
@@ -117,6 +136,30 @@ void NuCC::FillReconstructed(art::Event const &evt)
         if (MatchDaughter(evt, pfp))
           fNumMatchedDaughters++;
         fNueDaughtersTree->Fill();
+      }
+    }
+  }
+
+  // Store the obvious cosmic with the lowest score:
+  fBestObviousCosmic_FlashChi2 = std::numeric_limits<float>::max();
+  for (auto const pfp : pfparticles)
+  {
+    // Only look at obvious cosmics:
+    lar_pandora::MetadataVector pfp_metadata_vec = particlesToMetadata.at(pfp);
+    const larpandoraobj::PFParticleMetadata::PropertiesMap &pfp_properties = pfp_metadata_vec.front()->GetPropertiesMap();
+
+    if (pfp_properties.count("IsClearCosmic"))
+    {
+      if (pfp_properties.at("IsClearCosmic") && pfp->IsPrimary())
+      {
+        const std::vector<art::Ptr<anab::T0>> T0_v = nuFlashScoreAsso.at(pfp.key());
+        if (T0_v.size() == 1)
+        {
+          if (fBestObviousCosmic_FlashChi2 > T0_v.at(0)->TriggerConfidence())
+          {
+            fBestObviousCosmic_FlashChi2 = T0_v.at(0)->TriggerConfidence();
+          }
+        }
       }
     }
   }
@@ -169,6 +212,13 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
   fVx = pfp_vtx.X();
   fVy = pfp_vtx.Y();
   fVz = pfp_vtx.Z();
+  std::vector<float> pfp_start_fid_v(6, m_pfp_start_border);
+  fStartContained = IsContained(fNu_Vx, fNu_Vy, fNu_Vz, pfp_start_fid_v);
+  if (!fStartContained)
+  {
+    fDaughtersStartContained = false;
+  }
+
   const larpandoraobj::PFParticleMetadata::PropertiesMap &pfp_properties = particlesToMetadata.at(pfp).front()->GetPropertiesMap();
   fTrackScore = pfp_properties.at("TrackScore");
   fVtxDistance = pandoraInterfaceHelper.Distance3D(fVx, fVy, fVz, fNu_Vx, fNu_Vy, fNu_Vz);
@@ -209,6 +259,8 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
     {
       std::cout << "[NuCC::FillDaughters] Track has no PID attached to it" << std::endl;
     }
+
+    fIsMuonCandidate = IsMuonCandidate();
   }
 
   // Shower-like fields
@@ -366,7 +418,7 @@ void NuCC::FillTrueNu(art::Event const &evt)
       }
       const simb::MCNeutrino &mcnu = generator.front().GetNeutrino();
 
-      fTrueNu_InteractionType = mcnu.InteractionType();
+      fTrueNu_InteractionType = mcnu.Mode();
       fTrueNu_CCNC = mcnu.CCNC();
       fTrueNu_PDG = mcnu.Nu().PdgCode();
       fTrueNu_Energy = mcnu.Nu().E();
@@ -386,6 +438,24 @@ void NuCC::FillTrueNu(art::Event const &evt)
                                  fTrueNu_VxSce, fTrueNu_VySce, fTrueNu_VzSce);
       std::cout << ", CCNC: " << fTrueNu_CCNC << ", PDG: " << fTrueNu_PDG << ", E: " << fTrueNu_Energy << ", z-vertex: " << fTrueNu_Vz << std::endl;
     }
+
+    lar_pandora::MCParticleVector mcparticles;
+    larpandora.CollectMCParticles(evt, m_geant_producer, mcparticles);
+
+    for (auto const &mcparticle : mcparticles)
+    {
+      if (!(mcparticle->Process() == "primary" &&
+            mcparticle->T() != 0 &&
+            mcparticle->StatusCode() == 1))
+        continue;
+
+      const art::Ptr<simb::MCTruth> mc_truth = pandoraInterfaceHelper.TrackIDToMCTruth(evt, m_geant_producer, mcparticle->TrackId());
+      if (mc_truth->Origin() == simb::kBeamNeutrino)
+      {
+        fTrueNu_DaughterE.push_back(mcparticle->E());
+        fTrueNu_DaughterPDG.push_back(mcparticle->PdgCode());
+      }
+    }
   }
 }
 
@@ -404,9 +474,6 @@ void NuCC::FillTrueNuDaughters(art::Event const &evt)
     const art::Ptr<simb::MCTruth> mc_truth = pandoraInterfaceHelper.TrackIDToMCTruth(evt, m_geant_producer, mcparticle->TrackId());
     if (mc_truth->Origin() == simb::kBeamNeutrino)
     {
-      fTrueNu_DaughterE.push_back(mcparticle->E());
-      fTrueNu_DaughterPDG.push_back(mcparticle->PdgCode());
-
       bool daughter_matched_neutrino_pfp = false;
       if (matchedMCParticles.find(mcparticle) != matchedMCParticles.end())
       {
@@ -441,4 +508,39 @@ void NuCC::FillReconTruthMatching(art::Event const &evt)
   }
   std::cout << "[NuCC::FillReconTruthMatching] ";
   std::cout << "PFParticlesToMCParticles constructed: Number of PFPparticles matched: " << matchedParticles.size() << std::endl;
+}
+
+bool NuCC::IsContained(float x, float y, float z, const std::vector<float> &borders) const
+{
+  float fidvolXstart = borders[0];
+  float fidvolYstart = borders[1];
+  float fidvolZstart = borders[2];
+  float fidvolXend = borders[3];
+  float fidvolYend = borders[4];
+  float fidvolZend = borders[5];
+
+  art::ServiceHandle<geo::Geometry> geo;
+  std::vector<double> bnd = {
+      0., 2. * geo->DetHalfWidth(), -geo->DetHalfHeight(), geo->DetHalfHeight(),
+      0., geo->DetLength()};
+
+  bool is_x = x > (bnd[0] + fidvolXstart) && x < (bnd[1] - fidvolXend);
+  bool is_y = y > (bnd[2] + fidvolYstart) && y < (bnd[3] - fidvolYend);
+  bool is_z = z > (bnd[4] + fidvolZstart) && z < (bnd[5] - fidvolZend);
+
+  return is_x && is_y && is_z;
+}
+
+bool NuCC::IsMuonCandidate()
+{
+  if (m_muon_cut_trackscore < fTrackScore &&
+      m_muon_cut_vtxdistance > fVtxDistance && 
+      m_muon_cut_protonchi2 > fTrackPID_chiproton &&
+      m_muon_cut_muonchi2 < fTrackPID_chimuon && 
+      m_muon_cut_protonchi2 > fTrackPID_chiproton &&
+      m_muon_cut_chiratio > fTrackPID_chiproton/fTrackPID_chimuon)
+  {
+    fIsMuonCandidate = true;
+  }
+  return fIsMuonCandidate;
 }

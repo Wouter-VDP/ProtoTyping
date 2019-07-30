@@ -1,4 +1,5 @@
 #include "TrackHelper.h"
+#include "ubana/ParticleID/Algorithms/uB_PlaneIDBitsetHelperFunctions.h"
 
 TrackHelper::TrackHelper()
 {
@@ -29,7 +30,8 @@ bool TrackHelper::getPID(std::map<std::string, float> &pid_map,
                 }
                 else
                 {
-                    if (AlgScore.fPlaneMask.test(0) && AlgScore.fAlgName == "Chi2")
+                    int planeid = UBPID::uB_getSinglePlane(AlgScore.fPlaneMask);
+                    if (planeid==2 && AlgScore.fAlgName == "Chi2")
                     {
                         if (anab::kVariableType(AlgScore.fVariableType) == anab::kGOF && anab::kTrackDir(AlgScore.fTrackDir) == anab::kForward)
                         {
