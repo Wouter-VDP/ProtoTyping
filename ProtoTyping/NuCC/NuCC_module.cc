@@ -24,7 +24,6 @@ void NuCC::analyze(art::Event const &evt)
   fTimeHigh = evtTime.timeHigh();
   fTimeLow = evtTime.timeLow();
   std::cout << "[NuCC::analyze]: Run " << fRun << ", Subrun " << fSubrun << ", Event " << fEvent << std::endl;
-  //std::cout << "[NuCC::analyze]: evt_time_sec " << evtTime.timeHigh() << ", evt_time_nsec " << evtTime.timeLow() << std::endl;
 
   larpandora.CollectPFParticleMetadata(evt, m_pfp_producer, pfparticles, particlesToMetadata);
   larpandora.BuildPFParticleMap(pfparticles, particleMap);
@@ -49,6 +48,8 @@ void NuCC::analyze(art::Event const &evt)
         FillTrueNuDaughters(evt);
       }
       FillReconstructed(evt);
+      // After all the fields are filled, do the selection and create association.
+      fIsNuMuCC = IsNuMuCC();
     }
   }
   fEventTree->Fill();
@@ -260,7 +261,11 @@ bool NuCC::FillDaughters(const art::Ptr<recob::PFParticle> &pfp,
       std::cout << "[NuCC::FillDaughters] Track has no PID attached to it" << std::endl;
     }
 
-    fIsMuonCandidate = IsMuonCandidate();
+    if (IsMuonCandidate())
+    {
+      // add pfp pointer to vector
+      m_muon_candidates.push_back(pfp);
+    }
   }
 
   // Shower-like fields
@@ -533,14 +538,55 @@ bool NuCC::IsContained(float x, float y, float z, const std::vector<float> &bord
 
 bool NuCC::IsMuonCandidate()
 {
-  if (m_muon_cut_trackscore < fTrackScore &&
-      m_muon_cut_vtxdistance > fVtxDistance && 
-      m_muon_cut_protonchi2 > fTrackPID_chiproton &&
-      m_muon_cut_muonchi2 < fTrackPID_chimuon && 
-      m_muon_cut_protonchi2 > fTrackPID_chiproton &&
-      m_muon_cut_chiratio > fTrackPID_chiproton/fTrackPID_chimuon)
-  {
-    fIsMuonCandidate = true;
-  }
+  fIsMuonCandidate = m_muon_cut_trackscore < fTrackScore &&
+                     m_muon_cut_vtxdistance > fVtxDistance && 
+                     m_muon_cut_protonchi2 > fTrackPID_chiproton &&
+                     m_muon_cut_muonchi2 < fTrackPID_chimuon && 
+                     m_muon_cut_protonchi2 > fTrackPID_chiproton &&
+                     m_muon_cut_chiratio > (fTrackPID_chiproton/fTrackPID_chimuon);
+
   return fIsMuonCandidate;
+}
+
+bool NuCC::IsNuMuCC()
+{
+  if (fNu_PDG == 14 &&
+      fNu_Score > m_event_cut_nuscore_hard &&
+      (fNu_Score > m_event_cut_nuscore_soft || fNu_FlashChi2 < m_event_cut_flashchi2) &&
+      fNu_Contained &&
+      fDaughtersStartContained &&
+      ((fNu_FlashChi2 / fBestObviousCosmic_FlashChi2) < m_event_cut_flashchi2_ratio))
+  {
+    // Check if there is a muon candidate:
+    if (m_muon_candidates.size() == 0)
+    {
+      std::cout << "[NuCC::IsNuMuCC] Passed cosmic rejection but no muon candidate found." << std::endl;
+      return false;
+    }
+    else
+    {
+      float max_length = 0;
+      for (const auto candidate : m_muon_candidates)
+      {
+        const art::Ptr<recob::Track> this_track = particlesToTracks.at(candidate).front();
+        if (this_track->Length() > max_length)
+        {
+          max_length = this_track->Length();
+        }
+      }
+      if (max_length > m_event_cut_length)
+      {
+        std::cout << "[NuCC::IsNuMuCC] Passed cosmic rejection and muon candidates found, the longest was picked! SELECTED" << std::endl;
+        return true;
+      }
+      else // Muon candidate is not long enough
+      {
+        return false;
+      }
+    }
+  }
+  else // Fails background rejection cuts
+  {
+    return false;
+  }
 }

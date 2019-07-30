@@ -164,9 +164,18 @@ private:
     float m_muon_cut_chiratio;
     float m_muon_cut_length;
 
+    float m_event_cut_flashchi2;
+    float m_event_cut_nuscore_soft;
+    float m_event_cut_nuscore_hard;
+    float m_event_cut_flashchi2_ratio;
+    float m_event_cut_length;
+
     PandoraInterfaceHelper pandoraInterfaceHelper;
     EnergyHelper energyHelper;
     TrackHelper trackHelper;
+
+    // Store the pfps that qualify as muon candidates
+    std::vector<art::Ptr<recob::PFParticle>> m_muon_candidates;
 
     // LAr Pandora Helper fields
     lar_pandora::LArPandoraHelper larpandora;
@@ -320,6 +329,12 @@ void NuCC::reconfigure(fhicl::ParameterSet const &p)
     m_muon_cut_muonchi2 = p.get<float>("muon_cut_muonchi2", 30);
     m_muon_cut_chiratio = p.get<float>("muon_cut_chiratio", 7);
     m_muon_cut_length = p.get<float>("muon_cut_length", 5);
+
+    m_event_cut_flashchi2 = p.get<float>("event_cut_flashchi2", 10);
+    m_event_cut_nuscore_soft = p.get<float>("event_cut_nuscore_soft", 0.25);
+    m_event_cut_nuscore_hard = p.get<float>("event_cut_nuscore_hard", 0.06);
+    m_event_cut_flashchi2_ratio = p.get<float>("event_cut_flashchi2_ratio", 5);
+    m_event_cut_length = p.get<float>("event_cut_length", 20);
 
     energyHelper.reconfigure(p);
 }
@@ -500,7 +515,6 @@ void NuCC::clearEvent()
     fNumNu = 0;
     fNu_FlashChi2 = 0;
     fBestObviousCosmic_FlashChi2 = 0;
-
     fTrueNu_DaughterPDG.clear();
     fTrueNu_DaughterE.clear();
     fTrueNu_DaughterMatched.clear();
@@ -524,6 +538,8 @@ void NuCC::clearEvent()
     matchedParticles.clear();
     matchedHitFractions.clear();
     matchedMCParticles.clear();
+
+    m_muon_candidates.clear();
 }
 
 void NuCC::clearDaughter()
